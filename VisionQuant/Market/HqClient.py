@@ -4,7 +4,7 @@ import pika
 import uuid
 
 
-class HqClient():
+class HqClient:
 
     def __init__(self):
         self.connection = pika.BlockingConnection(
