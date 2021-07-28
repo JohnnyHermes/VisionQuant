@@ -67,6 +67,7 @@ def fetch_kdata_from_tdx(code, frequency, start_time=None, end_time=None, **kwar
         out_df = mergeKdata(out_df, '5', frequency)
     else:
         raise ValueError
+    out_df = out_df[['time', 'open', 'close', 'high', 'low', 'volume', 'amount']]
     return out_df
 
 
@@ -80,7 +81,7 @@ def fetch_kdata_from_tdx_live(code, frequency, start_time=None, end_time=None, *
     fetched_kdata = client.bars(symbol=code, frequency='0', offset='400')
     fetched_kdata['time'] = fetched_kdata['datetime'].apply(lambda x: TimeTool.str_to_dt(x))
     fetched_kdata['volume'] = fetched_kdata['vol']
-    new_kdata = fetched_kdata[['open', 'close', 'high', 'low', 'volume', 'amount', 'time']]
+    new_kdata = fetched_kdata[['time', 'open', 'close', 'high', 'low', 'volume', 'amount']]
     return new_kdata
 
 

@@ -1,45 +1,16 @@
 import pickle
-
-import pika
-import uuid
+from VisionQuant.Engine.RPCClient import RPCClient
 
 
-class HqClient:
+class HqClient(RPCClient):
 
-    def __init__(self):
-        self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host='localhost'))
-        self.response = None
-        self.corr_id = None
-        self.channel = self.connection.channel()
-
-        result = self.channel.queue_declare(queue='', exclusive=True)
-        self.callback_queue = result.method.queue
-
-        self.channel.basic_consume(
-            queue=self.callback_queue,
-            on_message_callback=self.on_response,
-            auto_ack=True)
-
-    def on_response(self, ch, method, props, body):
-        if self.corr_id == props.correlation_id:
-            self.response = body
+    def __init__(self, host='localhost'):
+        super().__init__(host=host, routing_key='hqserver_rpc_queue')
 
     def get_data(self, codes):
         content = pickle.dumps(codes)
-        self.response = None
-        self.corr_id = str(uuid.uuid4())
-        self.channel.basic_publish(
-            exchange='',
-            routing_key='rpc_queue',
-            properties=pika.BasicProperties(
-                reply_to=self.callback_queue,
-                correlation_id=self.corr_id,
-            ),
-            body=content)
-        while self.response is None:
-            self.connection.process_data_events()
-        return pickle.loads(self.response)
+        response = self.call(content=content)
+        return pickle.loads(response)
 
 
 if __name__ == '__main__':
@@ -49,5 +20,6 @@ if __name__ == '__main__':
     print(" [x] Requesting data")
     code = Code('600639', '5')
     import time
-    response = Hq_rpc.get_data(code)  # 约0.1s
-    print(response.get_kdata('5').data)
+
+    data = pickle.loads(Hq_rpc.get_data(code))  # 约0.1s
+    print(data.get_kdata('5').fliter(key='index', start=-10, end=-1).data)

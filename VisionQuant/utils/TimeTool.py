@@ -53,7 +53,7 @@ def get_now_time(return_type='npdt64'):
 
 
 def is_trade_time(market):
-    return 1
+    return 0
 
 
 def time_delta(t1, t2):
