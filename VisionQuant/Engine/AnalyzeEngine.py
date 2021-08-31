@@ -4,14 +4,23 @@ import threading
 import time
 
 
-class StrategyThread:
-    def __init__(self, code, strategy):
-        self.code = code
-        self.strategy = strategy
+class StrategyThread(threading.Thread):
+    def __init__(self, strategy):
+        super().__init__()
+        self.func = strategy.analyze
+        self.lock = threading.Lock()
+        self.result = None
 
-    def start(self):
-        thread = threading.Thread(target=self.strategy.analyze)
-        thread.start()
+    def run(self):
+        with self.lock:
+            self.result = self.func()
+
+    def get_result(self):
+        try:
+            return self.result
+        except Exception as e:
+            print(e)
+            return None
 
 
 class AnalyzeEngine:
@@ -30,23 +39,39 @@ class AnalyzeEngine:
                     else:
                         self.code_pool[key].append(code)
 
-    def register_strategy(self, strategy, codes):
+    def register_strategy(self, strategy, codes, **kwargs):
+        if 'show_result' in kwargs:
+            show_result = kwargs['show_result']
+        else:
+            show_result = False
         if not isinstance(codes, list):
-            strategy_obj = strategy(codes)
-            self.code_pool[codes.code] = StrategyThread(code=codes, strategy=strategy_obj)
+            if 'local_data' in kwargs:
+                strategy_obj = strategy(codes, kwargs['local_data'], show_result)
+            else:
+                strategy_obj = strategy(codes, show_result=show_result)
+            self.code_pool[codes.code] = strategy_obj
         else:
             for code in codes:
-                strategy_obj = strategy(code)
-                self.code_pool[code.code] = StrategyThread(code=code, strategy=strategy_obj)
-                print(code.code)
+                if 'local_data' in kwargs:
+                    strategy_obj = strategy(code, kwargs['local_data'][code.code], show_result)
+                else:
+                    strategy_obj = strategy(code, show_result=show_result)
+                self.code_pool[code.code] = strategy_obj
 
     def run_strategy(self, codes):
         if not isinstance(codes, list):
-            self.code_pool[codes.code].start()
+            thread = StrategyThread(strategy=self.code_pool[codes.code])
+            thread.start()
+            thread.join()
+            return thread.get_result()
         else:
+            result_dict = dict()
             for code in codes:
-                self.code_pool[code.code].start()
-
+                thread = StrategyThread(strategy=self.code_pool[code.code])
+                thread.start()
+                thread.join()
+                result_dict[code.code] = thread.get_result()
+            return result_dict
 
 # class AnalyzeEngine:
 #     def __init__(self, hq_host='localhost'):

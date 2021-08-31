@@ -1,9 +1,236 @@
-import baostock as bs
-import numpy as np
+import time
+
 import pandas as pd
+from path import Path
+from socket import timeout
+from VisionQuant.DataCenter.VQTdx.TdxHqAPI import ResponseRecvFailed, SendRequestPkgFailed, ResponseHeaderRecvFailed
 from VisionQuant.utils import TimeTool
-from mootdx.quotes import Quotes
-from mootdx.reader import Reader
+from VisionQuant.DataCenter.VQTdx.TdxSocketClient import TdxStdHqSocketClient
+from VisionQuant.DataCenter.VQTdx.TdxReader import TdxStdReader
+from VisionQuant.utils.Params import Stock, LOCAL_DIR, HDF5_COMPLIB, HDF5_COMP_LEVEL, EXCEPT_CODELIST
+from retrying import retry
+
+
+class SocketClientsManager(object):
+    def __init__(self):
+        self._sockets = dict()
+
+    def init_socket(self, data_source_name, data_source):
+        if data_source_name in self._sockets:
+            # print("已存在该socket_clinet")
+            return self.get_socket(data_source_name)
+        else:
+            socket_client = data_source()
+            self._sockets[data_source_name] = socket_client.init_socket()  # 加入字典并实例化
+            return self._sockets[data_source_name]
+
+    def get_socket(self, socket_name):
+        return self._sockets[socket_name]
+
+    def close_socket(self, socket_name):
+        self._sockets[socket_name].close()
+        del self._sockets[socket_name]
+
+    def find(self, socket_name):
+        if socket_name in self._sockets:
+            return True
+        else:
+            return False
+
+
+class DataSourceTdxLive(object):
+    name = ('tdx_live', TdxStdHqSocketClient)
+
+    @staticmethod
+    @retry(stop_max_attempt_number=5)
+    def fetch_kdata(socket_client, code):
+        try:
+            fetched_kdata = socket_client.api.get_kdata(socket_client.socket,
+                                                        code=code.code,
+                                                        market=code.market,
+                                                        freq=code.frequency,
+                                                        count=400)
+        except (ResponseRecvFailed, SendRequestPkgFailed, timeout, ResponseHeaderRecvFailed):
+            print("连接至服务器失败，重新尝试链接...")
+            flg = socket_client.reconnect()
+            if flg:
+                print("重新连接成功")
+            raise ResponseRecvFailed
+        else:
+            if len(fetched_kdata) == 0:
+                return fetched_kdata
+            # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
+            fetched_kdata.drop(fetched_kdata[fetched_kdata['volume'] == 0].index, inplace=True)
+            fetched_kdata.reset_index(drop=True, inplace=True)
+        return fetched_kdata
+
+    @staticmethod
+    @retry(stop_max_attempt_number=5)
+    def fetch_codelist(socket_client, market=Stock.Ashare):
+        def flitercode(code: str):
+            if (code.startswith('51') or code.startswith('58')) and code[-1] != '0':
+                return 0
+            elif code in EXCEPT_CODELIST or '519000' <= code < '600000':
+                return 0
+            else:
+                return 1
+
+        try:
+            data = socket_client.api.get_stocks_list(socket_client.socket, market)
+        except (ResponseRecvFailed, SendRequestPkgFailed, timeout):
+            print("连接至服务器失败，重新尝试链接...")
+            socket_client.init_socket()
+            raise ResponseRecvFailed
+        else:
+            data['flag'] = data['code'].apply(flitercode)
+            data.drop(data[data['flag'] == 0].index, inplace=True)
+            data.drop(columns=['flag'], inplace=True)
+        return data
+
+    def fetch_latest_quotes(self, sock_client, code: object):
+        pass
+
+
+class DataSourceTdxLocal(object):
+    name = ('tdx_local', TdxStdReader)
+
+    @staticmethod
+    def fetch_kdata(socket_client, code):
+        fetched_kdata = socket_client.api.get_kdata(socket_client.socket,
+                                                    code=code.code,
+                                                    market=code.market,
+                                                    freq=code.frequency)
+        if len(fetched_kdata) == 0:
+            return fetched_kdata
+        # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
+        fetched_kdata.drop(fetched_kdata[fetched_kdata['volume'] == 0].index, inplace=True)
+        out_df = fetched_kdata[(fetched_kdata['time'] >= code.start_time) &
+                               (fetched_kdata['time'] <= code.end_time)]
+        out_df.reset_index(drop=True, inplace=True)
+        return out_df
+
+
+class LocalReaderAPI(object):
+    @staticmethod
+    def get_kdata(reader, code, market, freq):
+        try:
+            datapath = reader.find_path_kdata(code, market)
+            store = pd.HDFStore(datapath, mode='r', complib=HDF5_COMPLIB, complevel=HDF5_COMP_LEVEL)
+        except OSError as e:
+            print(e)
+            return pd.DataFrame(columns=['time', 'open', 'close', 'high', 'low', 'volume', 'amount'])
+        else:
+            try:
+                df = store.get('_' + freq)
+            except KeyError:
+                print("未储存此frequency的数据:{}".format(freq))
+                store.close()
+                return pd.DataFrame(columns=['time', 'open', 'close', 'high', 'low', 'volume', 'amount'])
+            else:
+                store.close()
+                return df
+
+    @staticmethod
+    def get_codelist(reader, market=Stock.Ashare):
+        try:
+            datapath = reader.find_path_codelist(market)
+            code_list = pd.read_csv(datapath, encoding='utf-8', dtype={'code': str, 'name': str, 'market': int})
+        except OSError as e:
+            print(e)
+            return pd.DataFrame(columns=['code', 'name', 'market'])
+        else:
+            return code_list
+
+
+class LocalReader(object):
+    localdir = None
+
+    def __init__(self):
+        self.socket = self
+        self.api = LocalReaderAPI()
+
+    def init_socket(self):
+        if Path(LOCAL_DIR).isdir():
+            self.localdir = LOCAL_DIR
+        else:
+            raise OSError('HDF5 Reader:{} 目录不存在'.format(LOCAL_DIR))
+        return self
+
+    def find_path_kdata(self, code, market):
+        """
+        自动匹配文件路径，辅助函数
+        :return: path
+        """
+        if self.localdir is None:
+            raise RuntimeError("没有init socket")
+        market, market_type = self.market_transform(market)
+        if market_type is None:
+            fname = code + '.h5'
+        else:
+            fname = market_type + code + '.h5'
+
+        path = Path('/'.join([self.localdir, 'KData', market, fname]))
+        if not Path(path).exists():
+            raise OSError(f'未找到所需的文件: {path}')
+        return path
+
+    def find_path_codelist(self, market):
+        """
+        自动匹配文件路径，辅助函数
+        :return: path
+        """
+
+        def market_transform(_market):
+            if _market is Stock.Ashare:
+                return 'ashare'
+            else:  # todo:增加不同市场类型
+                return 'future'
+
+        if self.localdir is None:
+            raise RuntimeError("没有init socket")
+
+        market_str = market_transform(market)
+        path = Path('/'.join([self.localdir, 'code_list_' + market_str + '.csv']))
+        if not Path(path).exists():
+            raise OSError(f'未找到所需的文件: {path}')
+        return path
+
+    @staticmethod
+    def market_transform(market):
+        if market in [Stock.Ashare.MarketSH, Stock.Ashare.MarketSH.STOCK, Stock.Ashare.MarketSH.ETF,
+                      Stock.Ashare.MarketSH.INDEX,Stock.Ashare.MarketSH.KCB]:
+            return 'Ashare', 'sh'
+        elif market in [Stock.Ashare.MarketSZ, Stock.Ashare.MarketSZ.STOCK, Stock.Ashare.MarketSZ.ETF,
+                        Stock.Ashare.MarketSZ.INDEX,Stock.Ashare.MarketSZ.CYB]:
+            return 'Ashare', 'sz'
+        else:
+            raise ValueError("错误的市场类型")
+
+
+class DataSourceLocal(object):
+    name = ('local', LocalReader)
+
+    @staticmethod
+    def fetch_kdata(socket_client, code):
+        fetched_kdata = socket_client.api.get_kdata(socket_client.socket,
+                                                    code=code.code,
+                                                    market=code.market,
+                                                    freq=code.frequency)
+        if len(fetched_kdata) == 0:
+            return fetched_kdata
+        # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
+        fetched_kdata.drop(fetched_kdata[fetched_kdata['volume'] == 0].index, inplace=True)
+        out_df = fetched_kdata[(fetched_kdata['time'] >= code.start_time) &
+                               (fetched_kdata['time'] <= code.end_time)]
+        out_df.reset_index(drop=True, inplace=True)
+        return out_df
+
+    @staticmethod
+    def fetch_codelist(socket_client, market):
+        codelist = socket_client.api.get_codelist(socket_client.socket,
+                                                  market=market)
+
+        return codelist[['code', 'name', 'market']]
 
 
 def mergeKdata(kdata, period, new_period):
@@ -25,84 +252,56 @@ def mergeKdata(kdata, period, new_period):
     return new_out_df
 
 
-def fetch_kdata_from_tdx(code, frequency, start_time=None, end_time=None, **kwargs):
-    tdx_path = 'D:/Program/new_tdx'
-    reader = Reader.factory(market='std', tdxdir=tdx_path)
-    if start_time is None:
-        start_time = TimeTool.str_to_npdt64('2019-1-1 9:30')
-    if end_time is None:
-        end_time = TimeTool.get_now_time()
-    if frequency == 'd':
-        # 读取日线数据
-        out_df = reader.daily(symbol=code)
-        out_df['time'] = out_df.index.values
-        if out_df['volume'].iloc[-47] == 0 and out_df['volume'].iloc[-2] == 0:
-            out_df = out_df[:-48]  # 去除停牌数据
-        out_df = out_df[(out_df['time'] >= start_time) & (out_df['time'] <= end_time)]
-        out_df = out_df.reset_index(drop=True)
-    elif frequency == '5':
-        # 读取5分钟数据
-        out_df = reader.fzline(symbol=code)  # 约0.2s
-        out_df['time'] = out_df.index.values
-        out_df = out_df[(out_df['time'] >= start_time) & (out_df['time'] <= end_time)]
-        if out_df['volume'].iat[-47] == 0 and out_df['volume'].iat[-2] == 0:
-            out_df = out_df[:-48]  # 去除停牌数据
-        out_df = out_df.reset_index(drop=True)
-    elif frequency == '1':
-        # 读取1分钟数据
-        out_df = reader.minute(symbol=code)
-        out_df['time'] = out_df.index.values
-        if out_df['volume'].iloc[-47] == 0 and out_df['volume'].iloc[-2] == 0:
-            out_df = out_df[:-48]  # 去除停牌数据
-        out_df = out_df[(out_df['time'] >= start_time) & (out_df['time'] <= end_time)]
-        out_df = out_df.reset_index(drop=True)
-    elif frequency in ['15', '30', '60', '120']:
-        # 读取5分钟数据
-        out_df = reader.fzline(symbol=code)
-        out_df['time'] = out_df.index.values
-        if out_df['volume'].iloc[-47] == 0 and out_df['volume'].iloc[-2] == 0:
-            out_df = out_df[:-48]  # 去除停牌数据
-        out_df = out_df[(out_df['time'] >= start_time) & (out_df['time'] <= end_time)]
-        out_df = out_df.reset_index(drop=True)
-        out_df = mergeKdata(out_df, '5', frequency)
-    else:
-        raise ValueError
-    out_df = out_df[['time', 'open', 'close', 'high', 'low', 'volume', 'amount']]
-    return out_df
+"""
+数据获取方法
+"""
 
 
-# todo: 修改参数逻辑
-def fetch_kdata_from_tdx_live(code, frequency, start_time=None, end_time=None, **kwargs):
-    if end_time is None:
-        end_time = TimeTool.get_now_time()
-    if start_time is None:
-        start_time = TimeTool.time_standardization('2020-2-1')
-    client = Quotes.factory(market='std')
-    fetched_kdata = client.bars(symbol=code, frequency='0', offset='400')
-    fetched_kdata['time'] = fetched_kdata['datetime'].apply(lambda x: TimeTool.str_to_dt(x))
-    fetched_kdata['volume'] = fetched_kdata['vol']
-    new_kdata = fetched_kdata[['time', 'open', 'close', 'high', 'low', 'volume', 'amount']]
-    return new_kdata
+class DataSource(object):
+    class Local:
+        VQtdx = DataSourceTdxLocal
+        Default = DataSourceLocal
 
-
-def fetch_kdata(code, frequency, method_func, start_time=None, end_time=None, **kwargs):
-    df = method_func(code=code,
-                     frequency=frequency,
-                     start_time=start_time,
-                     end_time=end_time,
-                     kwargs=kwargs)
-    return df
+    class Live:
+        VQtdx = DataSourceTdxLive
 
 
 if __name__ == '__main__':
-    VQtdx = fetch_kdata_from_tdx
-    test_code = '600639'
-    test_frequency = '5'
-    test_start_time = '2020-2-1'
-    # test_end_time = '2021-06-25 15:00:00'
-    test_df = fetch_kdata(code=test_code,
-                          frequency=test_frequency,
-                          method_func=VQtdx,
-                          start_time=test_start_time,
-                          end_time=None)
-    print(test_df)
+    sk_client_mng = SocketClientsManager()
+    from VisionQuant.utils.Code import Code
+
+    test_code = Code('002382', '5', start_time='2020-3-2', data_source={'local': DataSource.Local.Default})
+    test_socket_client_local = sk_client_mng.init_socket(*test_code.data_source_local.name)
+    test_fetch_data = test_code.data_source_local.fetch_kdata(test_socket_client_local, test_code)
+    print(test_fetch_data[-48:])
+    # test_socket_client_live = sk_client_mng.init_socket(*test_code.data_source_live.name)
+    # test_fetch_data = test_code.data_source_live.fetch_kdata(test_socket_client_live, test_code)
+    # print(test_fetch_data[:50])
+
+    # test_socket_client_live = sk_client_mng.init_socket(*test_code.data_source_live.name)
+    # test_stock_list = test_code.data_source_live.fetch_codelist(test_socket_client_live)
+    # from VisionQuant.DataCenter.DataStore import store_code_list_stock
+    #
+    # store_code_list_stock(test_stock_list, Stock.Ashare)
+
+    from VisionQuant.DataCenter.DataStore import store_kdata_to_hdf5
+    from VisionQuant.DataStruct.AShare import AShare
+    from VisionQuant.utils.Params import Freq
+
+    # t1 = time.perf_counter()
+    # test_datastruct = AShare(code=test_code, kdata_dict={Freq.MIN5: test_fetch_data})
+    # store_kdata_to_hdf5(test_datastruct)
+    # t2 = time.perf_counter()
+    # print(t2 - t1)
+
+    # new_test_code = test_code.copy()
+    # new_test_code.data_source_local = DataSource.Local.Default
+    # test_socket_client_local = sk_client_mng.init_socket(*new_test_code.data_source_local.name)
+
+    # t1 = time.perf_counter()
+    # test_fetch_data = test_code.data_source_local.fetch_kdata(test_socket_client_local, test_code)
+    # t2 = time.perf_counter()
+    # print(t2 - t1)
+    # print(test_fetch_data)
+    # test_stock_list_local = new_test_code.data_source_local.fetch_codelist(test_socket_client_local, Stock.Ashare)
+    # print(test_stock_list_local)

@@ -1,5 +1,4 @@
 import pika
-from VisionQuant.utils.ClassTool import is_method_overided_in_subclass
 
 
 class RPCServer:
@@ -28,7 +27,5 @@ class RPCServer:
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
     def process_request(self, body):
-        if is_method_overided_in_subclass('process_request', self.__class__, RPCServer):
-            raise NotImplementedError("没有重写process_request方法")
-        response = None
-        return response
+        raise NotImplementedError("没有重写process_request方法")
+

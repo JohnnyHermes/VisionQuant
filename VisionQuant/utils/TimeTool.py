@@ -1,10 +1,23 @@
 import datetime
 import numpy as np
 import re
+import pandas as pd
+
+from VisionQuant.utils.Params import Stock
 
 
 def dt_to_npdt64(dt):
     return np.datetime64(dt)
+
+
+def npdt64_to_dt(dt64):
+    dt = dt64.astype(datetime.datetime)
+    if isinstance(dt, datetime.datetime):
+        return dt
+    elif isinstance(dt, int):
+        return datetime.datetime.utcfromtimestamp(dt * 1e-9)
+
+    # return (dt64 - np.datetime64('1970-01-01T00:00:00Z')) / np.timedelta64(1, 's')
 
 
 def str_to_dt(strtime):
@@ -12,9 +25,10 @@ def str_to_dt(strtime):
         t = datetime.datetime.strptime(strtime, '%Y-%m-%d %H:%M:%S')
     elif re.match(r'\d{2,4}-\d{1,2}-\d{1,2} \d{1,2}:\d{1,2}', strtime):
         t = datetime.datetime.strptime(strtime, '%Y-%m-%d %H:%M')
+        t = t.replace(second=0)
     elif re.match(r'\d{2,4}-\d{1,2}-\d{1,2}', strtime):
         t = datetime.datetime.strptime(strtime, '%Y-%m-%d')
-        t = t.replace(hour=9, minute=30)
+        t = t.replace(hour=9, minute=0, second=0)
     else:
         raise ValueError
     return t
@@ -25,8 +39,24 @@ def str_to_npdt64(strtime):
     return dt_to_npdt64(t)
 
 
-def dt_to_str(dt):
-    return dt.strftime('%Y-%m-%d %H:%M:%S')
+def dt_to_str(dt, fmt='%Y-%m-%d %H:%M:%S'):
+    return dt.strftime(fmt)
+
+
+def npdt64_to_str(dt64, fmt='%Y-%m-%d %H:%M:%S'):
+    dt = npdt64_to_dt(dt64)  # np.dt64 转 datetime.datetime
+    return dt_to_str(dt, fmt)
+
+
+def time_to_str(t, fmt='%Y-%m-%d %H:%M:%S'):
+    if isinstance(t, datetime.datetime):
+        return dt_to_str(t, fmt)
+    elif isinstance(t, np.datetime64):
+        return npdt64_to_str(t, fmt)
+    elif isinstance(t, str):
+        return t
+    else:
+        raise ValueError("Wrong Time")
 
 
 def time_standardization(t):
@@ -40,7 +70,14 @@ def time_standardization(t):
         raise ValueError("Wrong Time")
 
 
-def get_now_time(return_type='npdt64'):
+def get_now_time(return_type: str = 'npdt64'):
+    """
+
+    :param return_type: 支持三种类型 'datetime':datetime.datetime
+                                   'npdt64':np.datetime64
+                                   'str':str
+    :return:
+    """
     if return_type == 'datetime':
         return datetime.datetime.now()
     elif return_type == 'str':
@@ -53,7 +90,21 @@ def get_now_time(return_type='npdt64'):
 
 
 def is_trade_time(market):
-    return 0
+    nowtime = get_now_time(return_type='datetime')
+    weekday = nowtime.isoweekday()
+    if Stock.is_ashare(market):
+        if weekday > 5:
+            return 0
+        t1 = nowtime.replace(hour=9, minute=30, second=0)
+        t2 = nowtime.replace(hour=11, minute=30, second=15)
+        t3 = nowtime.replace(hour=13, minute=0, second=0)
+        t4 = nowtime.replace(hour=15, minute=0, second=15)
+        if t1 <= nowtime <= t2 or t3 <= nowtime <= t4:
+            return 1
+        else:
+            return 0
+    else:
+        return 0
 
 
 def time_delta(t1, t2):
@@ -69,5 +120,12 @@ def time_delta(t1, t2):
 
 
 if __name__ == '__main__':
-    test_strtime = '2021-06-27'
-    print(str_to_dt(test_strtime), type(str_to_dt(test_strtime)))
+    test_strtime = '2021-06-27 9:0:0'
+    test_dt = str_to_dt(test_strtime)
+    test_npdt64 = dt_to_npdt64(test_dt)
+    new_test_dt = npdt64_to_dt(test_npdt64)
+    print(npdt64_to_str(test_npdt64))
+    print(test_dt, new_test_dt)
+    print(test_npdt64, type(test_npdt64), new_test_dt)
+    # print(str_to_dt(test_strtime), type(str_to_dt(test_strtime)))
+    print(is_trade_time(Stock.Ashare.MarketSH.ETF))

@@ -1,6 +1,5 @@
 from VisionQuant.utils import TimeTool
-from numpy import datetime64
-from datetime import datetime
+from copy import deepcopy
 from pandas import concat
 
 
@@ -12,6 +11,9 @@ class KDataStruct:
         return len(self.data)
 
     def fliter(self, key='index', start=0, end=-1, is_reset_index=False):
+        if len(self) == 0:
+            print('数据为空')
+            return self
         if key == 'index':
             if start < 0:
                 start = len(self) + start
@@ -31,9 +33,15 @@ class KDataStruct:
         return new_KDataStruct
 
     def get_last_bar(self):
+        if len(self) == 0:
+            print('数据为空')
+            return 0
         return self.data.tail(1)
 
     def get_first_bar(self):
+        if len(self) == 0:
+            print('数据为空')
+            return 0
         return self.data.head(1)
 
     def get_last_time(self):
@@ -52,21 +60,35 @@ class KDataStruct:
         line = self.get_last_bar()
         return line.close.values[0]
 
+    def get_last_bar_values(self):
+        line = self.get_last_bar()
+        return line.open.values[0], line.close.values[0], line.high.values[0], line.low.values[0], line.volume.values[0]
+
     def convert_index_time(self, index=None, time=None):
+        if len(self) == 0:
+            print('数据为空')
+            return 0
         if index is not None:
             return TimeTool.time_standardization(self.data[self.data.index == index].time.values[0])
         elif time is not None:
             return self.data[self.data.time == TimeTool.time_standardization(time)].index.values[0]
 
     def update(self, new_kdata):
-        tmp_ori_data = self.data[self.data['time'] < new_kdata['time'].values[0]]
-        self.data = concat([tmp_ori_data, new_kdata])
-        self.data = self.data.reset_index(drop=True)
+        if len(new_kdata) == 0:
+            print('新获取的数据为空')
+            return self
+        if len(self) > 0:
+            tmp_ori_data = self.data[self.data['time'] < new_kdata['time'].values[0]]
+            self.data = concat([tmp_ori_data, new_kdata])
+            self.data = self.data.reset_index(drop=True)
+        else:
+            self.data = new_kdata
+            self.data = self.data.reset_index(drop=True)
         return self
 
 
 class BaseDataStruct:
-    def __init__(self, code, kdata_dict):
+    def __init__(self, code: object, kdata_dict):
         self.code = code
         self.kdata = dict()
         for frequency, kdata_df in kdata_dict.items():
@@ -74,3 +96,15 @@ class BaseDataStruct:
 
     def get_kdata(self, frequency):
         return self.kdata[frequency]
+
+    def get_freqs(self):
+        return self.kdata.keys()
+
+    def fliter(self, key='index', start=0, end=-1, is_reset_index=True):
+        tmp_data = self.copy()
+        for freq, kdata in tmp_data.kdata.items():
+            tmp_data.kdata[freq] = kdata.fliter(key=key, start=start, end=end, is_reset_index=is_reset_index)
+        return tmp_data
+
+    def copy(self):
+        return deepcopy(self)
