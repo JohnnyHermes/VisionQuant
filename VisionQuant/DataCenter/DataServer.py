@@ -137,8 +137,9 @@ class DataServer:
                             freq = code.frequency
                         else:
                             freq = code.frequency[0]
-                        if self.data_dict[code.code].get_kdata(freq).get_start_time() > code.start_time:
-                            self.data_dict[code.code] = self.add_data(code)
+                        if self.data_dict[code.code].get_kdata(freq).get_start_time() > \
+                                TimeTool.time_standardization(code.start_time):
+                            self.add_data(code)
                         tmp_datastruct = self.data_dict[code.code].fliter(key='time',
                                                                           start=code.start_time, end=code.end_time)
                         return_data[code.code] = tmp_datastruct
@@ -157,8 +158,9 @@ class DataServer:
                         freq = codes.frequency
                     else:
                         freq = codes.frequency[0]
-                    if self.data_dict[codes.code].get_kdata(freq).get_start_time() > codes.start_time:
-                        self.data_dict[codes.code] = self.add_data(codes)
+                    if self.data_dict[codes.code].get_kdata(freq).get_start_time() >\
+                            TimeTool.time_standardization(codes.start_time):
+                        self.add_data(codes)
                     tmp_datastruct = self.data_dict[codes.code].fliter(key='time',
                                                                        start=codes.start_time, end=codes.end_time)
                     return tmp_datastruct
