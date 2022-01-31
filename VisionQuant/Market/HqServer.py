@@ -22,6 +22,6 @@ class HqServer(RPCServer):
 
 
 if __name__ == '__main__':
-    # server = HqServer()  # 普通版
-    server = HqServer(force_live=True)  # 强制连接到live服务器
+    server = HqServer()  # 普通版
+    # server = HqServer(force_live=True)  # 强制连接到live服务器
     server.start()
