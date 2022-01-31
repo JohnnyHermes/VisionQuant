@@ -30,7 +30,7 @@ def fetch_kdata(code: str, freq: str, market: int, st: str, et: str):
                                  'live': DataSource.Live.VQtdx}
                     )
     data_struct = data_server.get_data(tmp_code)
-    kdata = data_struct.get_kdata(freq).data_struct
+    kdata = data_struct.get_kdata(freq).data
     # 时间序列化，转换为字符串
     kdata['time'] = kdata['time'].apply(TimeTool.time_to_str, args=('%Y%m%d%H%M%S',))
     resp = JsonTool.to_json(kdata)
