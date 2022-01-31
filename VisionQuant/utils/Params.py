@@ -5,7 +5,7 @@ LOCAL_DIR = CfgTool.get_cfg('DataSource', 'local_dir')
 REMOTE_ADDR = CfgTool.get_cfg('DataSource', 'remote_addr')
 HDF5_COMPLIB = 'blosc:zstd'
 HDF5_COMP_LEVEL = 5
-DATASERVER_MAX_COUNT = 5000
+DATASERVER_MAX_COUNT = int(CfgTool.get_cfg('DataServer', 'max_count'))
 
 """
 Market Type 市场类型
