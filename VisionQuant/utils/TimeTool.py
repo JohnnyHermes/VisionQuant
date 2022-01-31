@@ -1,9 +1,18 @@
 import datetime
 import numpy as np
 import re
-import pandas as pd
+from path import Path
 
-from VisionQuant.utils.Params import Stock
+from VisionQuant.utils.Params import Stock, LOCAL_DIR
+
+# 交易日历读取
+tradedate_fpath = Path('/'.join([LOCAL_DIR, 'AshareTradeDate.txt']))
+if tradedate_fpath.exists():
+    with open(tradedate_fpath, 'r') as f:
+        data = f.read()
+        ASHARE_TRADE_DATE = data.split(',')
+else:
+    ASHARE_TRADE_DATE = None
 
 
 def dt_to_npdt64(dt):
@@ -26,6 +35,8 @@ def str_to_dt(strtime):
     elif re.match(r'\d{2,4}-\d{1,2}-\d{1,2} \d{1,2}:\d{1,2}', strtime):
         t = datetime.datetime.strptime(strtime, '%Y-%m-%d %H:%M')
         t = t.replace(second=0)
+    elif re.match(r'\d{14}', strtime):
+        t = datetime.datetime.strptime(strtime, '%Y%m%d%H%M%S')
     elif re.match(r'\d{2,4}-\d{1,2}-\d{1,2}', strtime):
         t = datetime.datetime.strptime(strtime, '%Y-%m-%d')
         t = t.replace(hour=9, minute=0, second=0)
@@ -64,6 +75,8 @@ def time_standardization(t):
         return dt_to_npdt64(t)
     elif isinstance(t, str):
         return str_to_npdt64(t)
+    elif isinstance(t, int):
+        return str_to_npdt64(str(t))
     elif isinstance(t, np.datetime64):
         return t
     else:
@@ -95,6 +108,10 @@ def is_trade_time(market):
     if Stock.is_ashare(market):
         if weekday > 5:
             return 0
+        if ASHARE_TRADE_DATE is not None:
+            date_str = time_to_str(nowtime, '%Y-%m-%d')
+            if date_str not in ASHARE_TRADE_DATE:
+                return 0
         t1 = nowtime.replace(hour=9, minute=30, second=0)
         t2 = nowtime.replace(hour=11, minute=30, second=15)
         t3 = nowtime.replace(hour=13, minute=0, second=0)

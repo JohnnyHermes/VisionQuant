@@ -177,6 +177,7 @@ class RiskManager(object):
         self.stop_price_log = []
         self.target_price_log = []
         self.cost_price_log = []
+        self.risk_rate_log = []
 
     def process_ana_result(self, result: AnalyzeResult, account):
         # self.result_log.append(result)
@@ -197,33 +198,46 @@ class RiskManager(object):
                 # 更新止损价
                 self.stop_price_dict[result.code] = max(result.stop_p, result.stop_p1,
                                                         self.stop_price_dict[result.code])
+                # self.stop_price_dict[result.code] = max(result.stop_p, self.stop_price_dict[result.code])
             else:  # 处于亏损状态
                 self.stop_price_dict[result.code] = max(result.stop_p, self.stop_price_dict[result.code])
             self.cost_price_log.append(cost_price)
             self.stop_price_log.append(self.stop_price_dict[result.code])
             self.target_price_log.append(self.target_price_dict[result.code])
             # print(self.stop_price_dict[result.code] > result.present_price)
+            risk_rate = (result.target_p - result.exp_final_p) / (result.exp_final_p - result.stop_p)
+            self.risk_rate_log.append(risk_rate)
             # 如果到达止损价，卖出
             if self.capital_mng.search_capital(result.code).get_avl_stock_count() > 0 and \
                     result.present_price <= self.stop_price_dict[result.code]:
+                if risk_rate >= self.min_risk_rate:
+                    rate = self.stop_rate * (1 + account.commission) / (1 - result.stop_p / result.exp_final_p)
+                    min_rate = self.capital_mng.get_cost_capital(result.code) / account.get_all_capital()
+                    if rate >= min_rate:
+                        return Order(order_type=OrderType.EMPTY, order_code=result.code)
+                    else:
+                        order_stock = self.capital_mng.search_capital(result.code).get_avl_stock_count() - \
+                                      account.get_max_avl_stock_cnt(result.exp_final_p, rate)
+                        # self.stop_price_dict[result.code] = max(result.stop_p, cost_price)
+                else:
+                    order_stock = self.capital_mng.search_capital(result.code).get_avl_stock_count()
                 order_type = OrderType.CELL
                 order_life_time = OrderLifeTime.IMMEDIATELY
                 order_code = result.code
                 order_price = (self.stop_price_dict[result.code] * 0.618 + result.present_price * 0.382)  # todo:可修改
-                order_stock = self.capital_mng.search_capital(result.code).get_avl_stock_count()
+                # order_stock = self.capital_mng.search_capital(result.code).get_avl_stock_count()
                 self.capital_mng.search_capital(result.code).freeze_stock(order_stock)
                 print("触发风控机制")
                 return Order(order_type, order_code, order_price, order_stock, order_life_time)
 
             # 追加买入条件计算
-            risk_rate = (result.target_p - result.exp_final_p) / (result.exp_final_p - result.stop_p)
             if risk_rate < self.min_risk_rate or \
                     (result.target_p / result.exp_final_p - 1) < self.min_risk_rate * self.stop_rate:
                 return Order(order_type=OrderType.EMPTY, order_code=result.code)
             else:
                 rate = self.stop_rate * (1 + account.commission) / (1 - result.stop_p / result.exp_final_p)
-                if (result.target_p / result.exp_final_p - 1) > 0.15:  # >0.15认为是突破了，放松止损率以期获取更多利润
-                    rate *= 2
+                # if (result.target_p / result.exp_final_p - 1) > 0.15:  # >0.15认为是突破了，放松止损率以期获取更多利润
+                #     rate *= 2
                 # 计算当前的capital_rate
                 min_rate = self.capital_mng.get_cost_capital(result.code) / account.get_all_capital()
                 if rate > 1:
@@ -249,12 +263,11 @@ class RiskManager(object):
             self.cost_price_log.append(result.stop_p)
             # 买入条件计算
             risk_rate = (result.target_p - result.exp_final_p) / (result.exp_final_p - result.stop_p)
+            self.risk_rate_log.append(risk_rate)
             if risk_rate < self.min_risk_rate:
                 return Order(order_type=OrderType.EMPTY, order_code=result.code)
             else:
                 rate = self.stop_rate * (1 + account.commission) / (1 - result.stop_p / result.exp_final_p)
-                if (result.target_p / result.exp_final_p - 1) > 0.15:  # >0.15认为是突破了，放松止损率以期获取更多利润
-                    rate *= 2
                 if rate > 1:
                     rate = 1
                 elif rate <= 0:

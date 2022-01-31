@@ -3,7 +3,7 @@ from VisionQuant.DataCenter.DataStore import store_kdata_to_hdf5
 from VisionQuant.utils.Code import Code
 from VisionQuant.DataCenter.DataFetch import DataSource
 from VisionQuant.utils.Params import Freq, Stock
-from VisionQuant.utils.CodePool import get_ashare_stock_list
+from VisionQuant.DataCenter.CodePool import get_ashare_stock_dict
 from VisionQuant.DataCenter.DataStore import store_code_list_stock
 
 data_server = DataServer()
@@ -20,7 +20,7 @@ if __name__ == '__main__':
     live_sk = data_server.sk_client_mng.init_socket(*DataSource.Live.VQtdx.name)
     test_stock_list = DataSource.Live.VQtdx.fetch_codelist(live_sk)
     store_code_list_stock(test_stock_list, Stock.Ashare)
-    test_code_list = get_ashare_stock_list()
+    test_code_list = get_ashare_stock_dict().values()
     # test_code_list = [Code('601728', data_source={'local': DataSource.Local.Default})]
     tmp_i = 0
     """
@@ -30,7 +30,7 @@ if __name__ == '__main__':
         else:
             break
     """
-    for code in test_code_list[tmp_i:]:
+    for code in test_code_list:
         update_single(code)
         print("update kdata success: {}".format(code.code))
     """

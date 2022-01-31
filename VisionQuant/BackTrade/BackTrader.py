@@ -1,4 +1,3 @@
-import datetime
 import time
 
 import numpy as np
@@ -10,8 +9,7 @@ from VisionQuant.DataCenter.DataServer import DataServer
 from VisionQuant.utils import TimeTool
 from VisionQuant.utils.Params import Freq, OrderStatus, OrderLifeTime, OrderType
 import datetime
-from VisionQuant.Analysis.relativity import Relativity
-from VisionQuant.utils.Code import Code
+from VisionQuant.Analysis.Relavity.relativity_old import Relativity
 from VisionQuant.Engine.AnalyzeEngine import AnalyzeEngine
 
 
@@ -46,7 +44,7 @@ class BackTrader:
     def set_data(self, datastruct):
         self.data_struct = datastruct
         self.kdata_start_time = self.data_struct.get_kdata('5').get_start_time()
-        self.timestamp = self.data_struct.get_kdata('5').data['time'].values
+        self.timestamp = self.data_struct.get_kdata('5').data_struct['time'].values
         self.timestamp = self.timestamp[np.where(self.bt_start_time <= self.timestamp)]
         self.timestamp = self.timestamp[np.where(self.timestamp <= self.bt_end_time)]
 
@@ -211,7 +209,6 @@ class BackTrader:
             _, self.present_price, self.high_price, self.low_price, self.volume = \
                 tmp_data.get_kdata(self.code.frequency).get_last_bar_values()
             analyze_result = analyze_engine.run_strategy(tmp_code)
-            # print(TimeTool.time_to_str(bt_now_time))
             # 处理上一个bar遗留下来的order
             order_result = self.process_order()
             # 回传给account进行处理
@@ -253,28 +250,27 @@ class BackTrader:
 
 
 if __name__ == '__main__':
-    from VisionQuant.utils.CodePool import get_ashare_stock_list
+    from VisionQuant.DataCenter.CodePool import get_ashare_stock_dict
     from VisionQuant.utils.Params import Stock
     import matplotlib.pyplot as plt
     import gc
     import pickle
-
     start_time = TimeTool.time_standardization('2021-1-1')
-    end_time = TimeTool.time_standardization('2021-8-31')
+    end_time = TimeTool.time_standardization('2021-8-30')
 
-    code_list = ['999999', '399006', '000300',
-                 '002382', '601101', '000911', '300339', '002340', '000150', '600036', '600958',
+    code_list = ['399006', '000300',
+                 '002382', '601101', '000911', '002340', '000150', '600036', '600958',
                  '601678', '600733', '002248', '600519', '002460']
-    code_list = get_ashare_stock_list(code_list, start_time='2020-1-1')
-    # code_list = ['002382']
-    fig = plt.figure(figsize=(16, 17))
-    grid = plt.GridSpec(17, 1)
-    for test_code in code_list:
+    code_dict = get_ashare_stock_dict(code_list, start_time='2020-1-1')
+    # code_list = get_ashare_stock_list(['999999'], start_time='2020-1-1')
+    fig = plt.figure(figsize=(16, 18))
+    grid = plt.GridSpec(18, 1)
+    for test_code in code_dict.values():
         if test_code.market in [Stock.Ashare.MarketSH.INDEX, Stock.Ashare.MarketSH.ETF,
                                 Stock.Ashare.MarketSZ.INDEX, Stock.Ashare.MarketSZ.ETF]:
-            stop_rate = 0.015
-        else:
             stop_rate = 0.02
+        else:
+            stop_rate = 0.03
         t1 = time.time()
         test_account = BackTradeAccount(init_moeny=10000000, commission=0.00025,
                                         risk_mng=RiskManager, min_risk_rate=2, stop_rate=stop_rate)
@@ -296,7 +292,7 @@ if __name__ == '__main__':
         price_ax = plt.subplot(grid[0:9, 0:1])
         plt.title(time_str)
         close = np.array(
-            test_bt.data_struct.get_kdata('5').fliter(key='time', start=start_time, end=end_time).data['close'].values)
+            test_bt.data_struct.get_kdata('5').fliter(key='time', start=start_time, end=end_time).data_struct['close'].values)
         # close = close[2::3]
         tp_log = np.array(test_bt.account.risk_mng.target_price_log)
         sp_log = np.array(test_bt.account.risk_mng.stop_price_log)
@@ -304,16 +300,17 @@ if __name__ == '__main__':
         plt.plot(range(len(sp_log)), sp_log, label='sp')
         plt.plot(range(len(close)), close, label='close')
         plt.legend()
-        plt.subplot(grid[9:15, 0:1], sharex=price_ax)
+        plt.subplot(grid[9:14, 0:1], sharex=price_ax)
         capitals = np.array(test_bt.capital_log) / test_bt.capital_log[0]
         std_close = close / close[0]
         plt.plot(range(len(std_close)), std_close, label='std_close')
         plt.plot(range(len(capitals)), capitals, label='cpt')
         plt.legend()
-        plt.subplot(grid[15:17, 0:1], sharex=price_ax)
+        plt.subplot(grid[14:16, 0:1], sharex=price_ax)
         plt.ylim(-0.1, 1.1)
         plt.plot(range(len(test_bt.capital_rate_log)), test_bt.capital_rate_log)
-
+        plt.subplot(grid[16:18, 0:1], sharex=price_ax)
+        plt.plot(range(len(test_bt.account.risk_mng.risk_rate_log)), test_bt.account.risk_mng.risk_rate_log)
         plt.savefig(test_code.code + '_result.jpg', dpi=600)
         plt.clf()
         # 清理内存

@@ -30,7 +30,20 @@ def store_kdata_to_hdf5(datastruct):
         for freq in datastruct.get_freqs():
             kdata = datastruct.get_kdata(freq)
             if len(kdata) > 0:
-                store.put(key='_' + freq, value=kdata.data)
+                store.put(key='_' + freq, value=kdata.data_struct)
+        store.close()
+
+
+def store_relavity_score_data_to_hdf5(result_df, key='Ashare'):
+    try:
+        fname = 'relavity_analyze_result.h5'
+        fpath = Path('/'.join([LOCAL_DIR, 'AnalyzeData', fname]))
+        store = pd.HDFStore(fpath, complib=HDF5_COMPLIB, complevel=HDF5_COMP_LEVEL)
+    except HDF5ExtError as e:
+        print(e)
+    else:
+        if len(result_df) > 0:
+            store.put(key=key, value=result_df, format='table', append=True)
         store.close()
 
 

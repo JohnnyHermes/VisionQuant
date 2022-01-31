@@ -16,7 +16,11 @@ def set_cfg(section, option):
 
 
 def get_cfg(section, option):
-    data = cfg.get(section, option)
+    try:
+        data = cfg.get(section, option)
+    except configparser.NoOptionError:
+        print('未获取到关键字值{}'.format(option))
+        return None
     return data
 
 

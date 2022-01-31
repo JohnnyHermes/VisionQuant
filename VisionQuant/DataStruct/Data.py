@@ -1,3 +1,5 @@
+import pandas as pd
+
 from VisionQuant.utils import TimeTool
 from copy import deepcopy
 from pandas import concat
@@ -5,14 +7,16 @@ from pandas import concat
 
 class KDataStruct:
     def __init__(self, kdata_df):
-        self.data = kdata_df
+        if len(kdata_df) == 0 or kdata_df is None:
+            self.data = pd.DataFrame(columns=['time', 'open', 'close', 'high', 'low', 'volume', 'amount'])
+        else:
+            self.data = kdata_df
 
     def __len__(self):
         return len(self.data)
 
     def fliter(self, key='index', start=0, end=-1, is_reset_index=False):
         if len(self) == 0:
-            print('数据为空')
             return self
         if key == 'index':
             if start < 0:
@@ -34,35 +38,53 @@ class KDataStruct:
 
     def get_last_bar(self):
         if len(self) == 0:
-            print('数据为空')
-            return 0
+            return None
         return self.data.tail(1)
 
     def get_first_bar(self):
         if len(self) == 0:
-            print('数据为空')
-            return 0
+            return None
         return self.data.head(1)
 
     def get_last_time(self):
         line = self.get_last_bar()
-        return TimeTool.time_standardization(line.time.values[0])
+        if line is not None:
+            return TimeTool.time_standardization(line.time.values[0])
+        else:
+            return TimeTool.time_standardization('2000-01-01 09:00:00')
 
     def get_start_time(self):
         line = self.get_first_bar()
-        return TimeTool.time_standardization(line.time.values[0])
+        if line is not None:
+            return TimeTool.time_standardization(line.time.values[0])
+        else:
+            return TimeTool.time_standardization('2000-01-01 09:00:00')
 
     def get_last_index(self):
         line = self.get_last_bar()
-        return line.index.values[0]
+        if line is not None:
+            return line.index.values[0]
+        else:
+            return None
 
     def get_last_price(self):
         line = self.get_last_bar()
-        return line.close.values[0]
+        if line is not None:
+            return line.close.values[0]
+        else:
+            return None
 
     def get_last_bar_values(self):
         line = self.get_last_bar()
-        return line.open.values[0], line.close.values[0], line.high.values[0], line.low.values[0], line.volume.values[0]
+        if line is not None:
+            return line.open.values[0], line.close.values[0], line.high.values[0],\
+                   line.low.values[0], line.volume.values[0]
+        else:
+            return None
+
+    def remove_zero_volume(self):
+        # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
+        self.data.drop(self.data[self.data['volume'] == 0].index, inplace=True)
 
     def convert_index_time(self, index=None, time=None):
         if len(self) == 0:
@@ -75,7 +97,6 @@ class KDataStruct:
 
     def update(self, new_kdata):
         if len(new_kdata) == 0:
-            print('新获取的数据为空')
             return self
         if len(self) > 0:
             tmp_ori_data = self.data[self.data['time'] < new_kdata['time'].values[0]]
