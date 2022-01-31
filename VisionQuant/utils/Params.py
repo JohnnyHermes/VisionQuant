@@ -3,6 +3,8 @@ from VisionQuant.utils import CfgTool
 TDX_DIR = CfgTool.get_cfg('DataSource', 'tdx_dir')
 LOCAL_DIR = CfgTool.get_cfg('DataSource', 'local_dir')
 REMOTE_ADDR = CfgTool.get_cfg('DataSource', 'remote_addr')
+DEFAULT_ASHARE_LOCAL_DATASOURCE= CfgTool.get_cfg('DataSource', 'ashare_local_source')
+DEFAULT_ASHARE_LIVE_DATASOURCE= CfgTool.get_cfg('DataSource', 'ashare_live_source')
 HDF5_COMPLIB = 'blosc:zstd'
 HDF5_COMP_LEVEL = 5
 DATASERVER_MAX_COUNT = int(CfgTool.get_cfg('DataServer', 'max_count'))

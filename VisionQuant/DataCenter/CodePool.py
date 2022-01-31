@@ -1,9 +1,25 @@
 from VisionQuant.utils.Code import Code
-from VisionQuant.DataCenter.DataFetch import DataSource, SocketClientsManager
-from VisionQuant.utils.Params import Stock
+from VisionQuant.DataCenter.DataFetch import DataSource
+from VisionQuant.utils.Params import Stock, DEFAULT_ASHARE_LOCAL_DATASOURCE, DEFAULT_ASHARE_LIVE_DATASOURCE
 from pandas.core.series import Series
 
-DEFAULT_ASHARE_DATA_SOURCE = {'local': DataSource.Local.VQapi, 'live': DataSource.Live.VQapi}
+if DEFAULT_ASHARE_LOCAL_DATASOURCE == 'Default':
+    ashare_local_source = DataSource.Local.Default
+elif DEFAULT_ASHARE_LOCAL_DATASOURCE == 'VQapi':
+    ashare_local_source = DataSource.Local.VQapi
+elif DEFAULT_ASHARE_LOCAL_DATASOURCE == 'VQtdx':
+    ashare_local_source = DataSource.Local.VQtdx
+else:
+    ashare_local_source = DataSource.Local.Default
+
+if DEFAULT_ASHARE_LIVE_DATASOURCE == 'VQtdx':
+    ashare_live_source = DataSource.Live.VQtdx
+elif DEFAULT_ASHARE_LIVE_DATASOURCE == 'VQapi':
+    ashare_live_source = DataSource.Live.VQapi
+else:
+    ashare_live_source = DataSource.Live.VQtdx
+
+DEFAULT_ASHARE_DATA_SOURCE = {'local': ashare_local_source, 'live': ashare_live_source}
 
 
 class CodePool:

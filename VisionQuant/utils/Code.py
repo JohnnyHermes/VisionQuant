@@ -139,7 +139,7 @@ class Code:
         if start_time is not None:
             self.start_time = TimeTool.time_standardization(start_time)
         else:
-            self.start_time = TimeTool.time_standardization('2015-1-1')
+            self.start_time = TimeTool.time_standardization('2008-01-01')
         if end_time is not None:
             self.end_time = TimeTool.time_standardization(end_time)
         else:
@@ -149,7 +149,7 @@ class Code:
                 self.data_source_local = data_source['local']
             else:
                 from VisionQuant.DataCenter.DataFetch import DataSource
-                self.data_source_local = DataSource.Local.VQtdx
+                self.data_source_local = DataSource.Local.Default
             if 'live' in data_source:
                 self.data_source_live = data_source['live']
             else:
