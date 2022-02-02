@@ -13,7 +13,7 @@ from VisionQuant.DataCenter.DataFetch import DataSource
 from VisionQuant.Engine.AnalyzeEngine import AnalyzeEngine
 from VisionQuant.utils import TimeTool
 from VisionQuant.utils.Code import Code
-from VisionQuant.utils.Params import Stock
+from VisionQuant.utils.Params import Market
 
 nptype_point = np.dtype([('index', np.uint32), ('price', np.float64), ('max_level', np.uint8), ('gain', np.uint16)])
 nptype_time_grav = np.dtype(
@@ -24,6 +24,7 @@ nptype_zcyl = np.dtype([('price', np.float64), ('ratio', np.float64), ('last_poi
 save_dir = 'E:/Onedrive/策略log/Relavity/'
 # 引入pyc模块
 from VisionQuant.Analysis.Relavity import relavity_cy
+RELAVITY_MAX_LEVEL = 7
 
 
 def get_peaks(zcyl_list):
@@ -64,7 +65,7 @@ class Relativity(StrategyBase):
         self.last_time = None
         self.last_price = None
         self.last_index = None
-        self.max_level = 7
+        self.max_level = RELAVITY_MAX_LEVEL
         self.min_step = 0.01
 
     def analyze(self):
@@ -78,23 +79,22 @@ class Relativity(StrategyBase):
         else:
             all_capital = basic_finance_data['流通股本']
         if len(self.kdata) <= 8640:
-            print(self.kdata.data)
             print("数据太短啦")
-            return 0
+            return None
         self.last_time = self.kdata.get_last_time()
         self.last_price = self.kdata.get_last_price()
         self.last_index = self.kdata.get_last_index()
         high = np.array(self.kdata.data['high'])
         low = np.array(self.kdata.data['low'])
         volume = np.array(self.kdata.data['volume'])
-        if self.code.market in [Stock.Ashare.MarketSH.ETF, Stock.Ashare.MarketSZ.ETF]:
+        if self.code.market in [Market.Ashare.MarketSH.ETF, Market.Ashare.MarketSZ.ETF]:
             self.min_step = 0.001
         else:
             self.min_step = 0.01
         t_read_data = time.perf_counter() - t
 
         t = time.perf_counter()
-        self.time_grav = relavity_cy.TimeGravitation(high, low, min_step=self.min_step, max_level=7)
+        self.time_grav = relavity_cy.TimeGravitation(high, low, min_step=self.min_step, max_level=RELAVITY_MAX_LEVEL)
         # print('calc particle', time.perf_counter() - t)
         #
         # t = time.perf_counter()
@@ -290,7 +290,7 @@ class Relativity(StrategyBase):
             # obj.show()
 
     def analyze_score(self):
-        t = time.perf_counter()
+        # t = time.perf_counter()
         data = self.get_data()
         self.kdata = data.get_kdata('5')
         self.kdata.remove_zero_volume()  # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
@@ -299,20 +299,21 @@ class Relativity(StrategyBase):
                                                    TimeTool.time_to_str(self.kdata.get_start_time()),
                                                    TimeTool.time_to_str(self.kdata.get_last_time())))
             return None
-        t_read_data = time.perf_counter() - t
-        t = time.perf_counter()
+        # t_read_data = time.perf_counter() - t
+        # t = time.perf_counter()
         high = np.array(self.kdata.data['high'])
         low = np.array(self.kdata.data['low'])
-        if self.code.market in [Stock.Ashare.MarketSH.ETF, Stock.Ashare.MarketSZ.ETF]:
+        if self.code.market in [Market.Ashare.MarketSH.ETF, Market.Ashare.MarketSZ.ETF]:
             self.min_step = 0.001
         else:
             self.min_step = 0.01
 
-        self.time_grav = relavity_cy.TimeGravitation(high, low, min_step=self.min_step, max_level=7)
+        self.time_grav = relavity_cy.TimeGravitation(high, low, min_step=self.min_step, max_level=RELAVITY_MAX_LEVEL)
         score = self.time_grav.get_score()
-        t_analyze = time.perf_counter() - t
-        print("分析{}完成, 日期:{}, 得分:{}, 读取数据用时:{:.4f}s 分析用时:{:.4f}s".format(
-            self.code.code, TimeTool.time_to_str(self.kdata.get_last_time()), score, t_read_data, t_analyze))
+        # t_analyze = time.perf_counter() - t
+        # print("分析{}完成, 日期:{}, 得分:{}, 读取数据用时:{:.4f}s 分析用时:{:.4f}s".format(
+        #     self.code.code, TimeTool.time_to_str(self.kdata.get_last_time(), '%Y-%m-%d'), score, t_read_data,
+        #     t_analyze))
         return score
 
     @staticmethod
@@ -565,11 +566,11 @@ if __name__ == '__main__':
     import gc, time
     from matplotlib.ticker import MultipleLocator, FixedLocator
 
-    end_time = TimeTool.str_to_dt('2022-01-29 15:00:00')
-    start_time = end_time - datetime.timedelta(days=365)
+    end_time = TimeTool.str_to_dt('2021-08-01 15:00:00')
+    start_time = end_time - datetime.timedelta(days=365+180)
     start_time = start_time.replace(hour=9, minute=0, second=0)
     test_code_list = ['002273', '002382', '601456', '002492', '001979', '002584', '999999', '399006', '399001']
-    test_code_list1 = ['601206']
+    test_code_list1 = ['600519']
     for test_code in test_code_list1:
         t_code = Code(test_code, '5', start_time, end_time=end_time,
                       data_source={'local': DataSource.Local.VQapi, 'live': DataSource.Live.VQapi})

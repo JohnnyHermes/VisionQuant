@@ -14,7 +14,7 @@ Market Type 市场类型
 """
 
 
-class Stock(object):
+class Market(object):
     class Ashare(object):
         class MarketSH(object):
             STOCK = 0
@@ -34,10 +34,10 @@ class Stock(object):
 
     @staticmethod
     def is_ashare(market):
-        if market in [Stock.Ashare, Stock.Ashare.MarketSH, Stock.Ashare.MarketSZ, Stock.Ashare.MarketSZ.STOCK,
-                      Stock.Ashare.MarketSZ.CYB, Stock.Ashare.MarketSZ.ETF, Stock.Ashare.MarketSZ.INDEX,
-                      Stock.Ashare.MarketSZ.BOND, Stock.Ashare.MarketSH.STOCK, Stock.Ashare.MarketSH.KCB,
-                      Stock.Ashare.MarketSH.ETF, Stock.Ashare.MarketSH.INDEX, Stock.Ashare.MarketSH.BOND]:
+        if market in [Market.Ashare, Market.Ashare.MarketSH, Market.Ashare.MarketSZ, Market.Ashare.MarketSZ.STOCK,
+                      Market.Ashare.MarketSZ.CYB, Market.Ashare.MarketSZ.ETF, Market.Ashare.MarketSZ.INDEX,
+                      Market.Ashare.MarketSZ.BOND, Market.Ashare.MarketSH.STOCK, Market.Ashare.MarketSH.KCB,
+                      Market.Ashare.MarketSH.ETF, Market.Ashare.MarketSH.INDEX, Market.Ashare.MarketSH.BOND]:
             return 1
         else:
             return 0

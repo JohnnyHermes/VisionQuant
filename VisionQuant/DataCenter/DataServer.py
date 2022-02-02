@@ -37,7 +37,7 @@ class DataServer:
                     if isinstance(code.frequency, list):
                         for freq in code.frequency:
                             tmp_code.frequency = freq
-                            socket_client = self.sk_client_mng.init_socket(*code.data_source_local.name)
+                            socket_client = self.sk_client_mng.init_socket(code.data_source_local)
                             try:
                                 fetch_data = code.data_source_local.fetch_kdata(socket_client, tmp_code)
                             except Exception as e:
@@ -47,7 +47,7 @@ class DataServer:
                             else:
                                 data_dict[freq] = fetch_data
                     else:
-                        socket_client = self.sk_client_mng.init_socket(*code.data_source_local.name)
+                        socket_client = self.sk_client_mng.init_socket(code.data_source_local)
                         try:
                             fetch_data = code.data_source_local.fetch_kdata(socket_client, tmp_code)
                         except Exception as e:
@@ -71,7 +71,7 @@ class DataServer:
             if isinstance(codes.frequency, list):
                 for freq in codes.frequency:
                     tmp_code.frequency = freq
-                    socket_client = self.sk_client_mng.init_socket(*codes.data_source_local.name)
+                    socket_client = self.sk_client_mng.init_socket(codes.data_source_local)
                     try:
                         fetch_data = codes.data_source_local.fetch_kdata(socket_client, tmp_code)
                     except Exception as e:
@@ -81,7 +81,7 @@ class DataServer:
                     else:
                         data_dict[freq] = fetch_data
             else:
-                socket_client = self.sk_client_mng.init_socket(*codes.data_source_local.name)
+                socket_client = self.sk_client_mng.init_socket(codes.data_source_local)
                 try:
                     fetch_data = codes.data_source_local.fetch_kdata(socket_client, tmp_code)
                 except Exception as e:
@@ -175,11 +175,11 @@ class DataServer:
                 and code.end_time <= self.data_dict[code.code].get_kdata(code.frequency).get_last_time():
             return self.data_dict[code.code]
         if now_time - self.last_update_time > datetime.timedelta(seconds=120):
-            if self.sk_client_mng.find(code.data_source_live.name[0]):
-                self.sk_client_mng.close_socket(code.data_source_live.name[0])
-            socket_client = self.sk_client_mng.init_socket(*code.data_source_live.name)
+            if self.sk_client_mng.find(code.data_source_live):
+                self.sk_client_mng.close_socket(code.data_source_live)
+            socket_client = self.sk_client_mng.init_socket(code.data_source_live)
         else:
-            socket_client = self.sk_client_mng.init_socket(*code.data_source_live.name)
+            socket_client = self.sk_client_mng.init_socket(code.data_source_live)
         if isinstance(code.frequency, list):
             tmp_code = code.copy()
             tmp_code.start_time = code.end_time
@@ -200,8 +200,8 @@ class DataServer:
     def get_basic_finance_data(self, code):
         if self.basic_finance_data is None:
             res = dict()
-            from VisionQuant.utils.Params import Stock
-            if code.market in [Stock.Ashare.MarketSH.STOCK, Stock.Ashare.MarketSZ.STOCK]:
+            from VisionQuant.utils.Params import Market
+            if code.market in [Market.Ashare.MarketSH.STOCK, Market.Ashare.MarketSZ.STOCK]:
                 from mootdx.quotes import Quotes
                 client = Quotes.factory(market='std')
                 data1 = client.F10(symbol=code.code, name='股本结构')

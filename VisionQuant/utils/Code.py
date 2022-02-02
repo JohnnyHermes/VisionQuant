@@ -1,5 +1,5 @@
 from VisionQuant.utils import TimeTool
-from VisionQuant.utils.Params import Stock, Freq
+from VisionQuant.utils.Params import Market, Freq
 import copy
 
 
@@ -42,59 +42,59 @@ def determine_market(code: str, selected_market=None):
 
     ch = code[0:2]
 
-    if selected_market is Stock.Ashare.MarketSH:
+    if selected_market is Market.Ashare.MarketSH:
         if ch == '60':
-            return Stock.Ashare.MarketSH.STOCK
+            return Market.Ashare.MarketSH.STOCK
         elif ch == '68':
-            return Stock.Ashare.MarketSH.KCB
+            return Market.Ashare.MarketSH.KCB
         elif ch == '88':
-            return Stock.Ashare.MarketSH.INDEX
+            return Market.Ashare.MarketSH.INDEX
         elif code in ['000688', '000300', '000016', '000011', '999999']:
-            return Stock.Ashare.MarketSH.INDEX
+            return Market.Ashare.MarketSH.INDEX
         elif ch in ['51', '58']:
-            return Stock.Ashare.MarketSH.ETF
+            return Market.Ashare.MarketSH.ETF
         elif ch == '11':
-            return Stock.Ashare.MarketSH.BOND
+            return Market.Ashare.MarketSH.BOND
         else:
-            return Stock.Ashare.MarketSH.OTHERS
-    elif selected_market is Stock.Ashare.MarketSZ:
+            return Market.Ashare.MarketSH.OTHERS
+    elif selected_market is Market.Ashare.MarketSZ:
         if ch == '00':
-            return Stock.Ashare.MarketSZ.STOCK
+            return Market.Ashare.MarketSZ.STOCK
         elif ch == '30':
-            return Stock.Ashare.MarketSZ.CYB
+            return Market.Ashare.MarketSZ.CYB
         elif code in ['399001', '399006', '399905', '399673', '399306']:
-            return Stock.Ashare.MarketSZ.INDEX
+            return Market.Ashare.MarketSZ.INDEX
         elif ch == '15':
-            return Stock.Ashare.MarketSZ.ETF
+            return Market.Ashare.MarketSZ.ETF
         elif ch == '12':
-            return Stock.Ashare.MarketSZ.BOND
+            return Market.Ashare.MarketSZ.BOND
         else:
-            return Stock.Ashare.MarketSZ.OTHERS
+            return Market.Ashare.MarketSZ.OTHERS
     else:
         if ch == '60':
-            return Stock.Ashare.MarketSH.STOCK
+            return Market.Ashare.MarketSH.STOCK
         elif ch == '00':
-            return Stock.Ashare.MarketSZ.STOCK
+            return Market.Ashare.MarketSZ.STOCK
         elif ch == '30':
-            return Stock.Ashare.MarketSZ.CYB
+            return Market.Ashare.MarketSZ.CYB
         elif ch == '68':
-            return Stock.Ashare.MarketSH.KCB
+            return Market.Ashare.MarketSH.KCB
         elif ch in ['00', '88']:
-            return Stock.Ashare.MarketSH.INDEX
+            return Market.Ashare.MarketSH.INDEX
         elif ch == '39':
-            return Stock.Ashare.MarketSZ.INDEX
+            return Market.Ashare.MarketSZ.INDEX
         elif ch in ['51', '58']:
-            return Stock.Ashare.MarketSH.ETF
+            return Market.Ashare.MarketSH.ETF
         elif ch == '15':
-            return Stock.Ashare.MarketSZ.ETF
+            return Market.Ashare.MarketSZ.ETF
         elif ch == '11':
-            return Stock.Ashare.MarketSH.BOND
+            return Market.Ashare.MarketSH.BOND
         elif ch == '12':
-            return Stock.Ashare.MarketSZ.BOND
+            return Market.Ashare.MarketSZ.BOND
         elif code == '999999':
-            return Stock.Ashare.MarketSH.INDEX
+            return Market.Ashare.MarketSH.INDEX
         else:
-            return Stock.Ashare.MarketSH.OTHERS
+            return Market.Ashare.MarketSH.OTHERS
 
 
 def code_transform(code: str):

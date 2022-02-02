@@ -5,7 +5,7 @@ from VisionQuant.DataCenter.DataServer import DataServer
 from VisionQuant.utils.Code import Code
 from VisionQuant.utils import TimeTool, JsonTool
 from VisionQuant.DataCenter.DataFetch import DataSource, SocketClientsManager
-from VisionQuant.utils.Params import Stock
+from VisionQuant.utils.Params import Market
 
 data_server = DataServer()
 
@@ -42,7 +42,7 @@ def fetch_codelist(market: str):
     sk_client_mng = SocketClientsManager()
     if market == 'ashare':
         sk = sk_client_mng.init_socket(*DataSource.Local.Default.name)
-        ashare_codelist = DataSource.Local.Default.fetch_codelist(sk, market=Stock.Ashare)
+        ashare_codelist = DataSource.Local.Default.fetch_codelist(sk, market=Market.Ashare)
         resp = JsonTool.to_json(ashare_codelist)
         return {'msg': 'success', 'data': resp}
     else:

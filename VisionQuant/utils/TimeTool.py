@@ -3,7 +3,7 @@ import numpy as np
 import re
 from path import Path
 
-from VisionQuant.utils.Params import Stock, LOCAL_DIR
+from VisionQuant.utils.Params import Market, LOCAL_DIR
 
 # 交易日历读取
 tradedate_fpath = Path('/'.join([LOCAL_DIR, 'AshareTradeDate.txt']))
@@ -105,7 +105,7 @@ def get_now_time(return_type: str = 'npdt64'):
 def is_trade_time(market):
     nowtime = get_now_time(return_type='datetime')
     weekday = nowtime.isoweekday()
-    if Stock.is_ashare(market):
+    if Market.is_ashare(market):
         if weekday > 5:
             return 0
         if ASHARE_TRADE_DATE is not None:
@@ -145,4 +145,4 @@ if __name__ == '__main__':
     print(test_dt, new_test_dt)
     print(test_npdt64, type(test_npdt64), new_test_dt)
     # print(str_to_dt(test_strtime), type(str_to_dt(test_strtime)))
-    print(is_trade_time(Stock.Ashare.MarketSH.ETF))
+    print(is_trade_time(Market.Ashare.MarketSH.ETF))

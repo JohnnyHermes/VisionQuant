@@ -10,39 +10,45 @@ from VisionQuant.DataCenter.VQTdx.TdxHqAPI import ResponseRecvFailed, SendReques
 from VisionQuant.utils import TimeTool, JsonTool
 from VisionQuant.DataCenter.VQTdx.TdxSocketClient import TdxStdHqSocketClient
 from VisionQuant.DataCenter.VQTdx.TdxReader import TdxStdReader
-from VisionQuant.utils.Params import Stock, LOCAL_DIR, HDF5_COMPLIB, HDF5_COMP_LEVEL, EXCEPT_CODELIST, REMOTE_ADDR
+from VisionQuant.utils.Params import Market, LOCAL_DIR, HDF5_COMPLIB, HDF5_COMP_LEVEL, EXCEPT_CODELIST, REMOTE_ADDR
+from VisionQuant.DataCenter.DataStore import anadata_store_market_transform, kdata_store_market_transform
 from retrying import retry
+
+
+class DataSourceBase(object):
+    name = None
+    sk_client = None
 
 
 class SocketClientsManager(object):
     def __init__(self):
         self._sockets = dict()
 
-    def init_socket(self, data_source_name, data_source):
-        if data_source_name in self._sockets:
-            # print("已存在该socket_clinet")
-            return self.get_socket(data_source_name)
+    def init_socket(self, data_source: DataSourceBase):
+        if data_source.name in self._sockets:
+            return self.get_socket(data_source)
         else:
-            socket_client = data_source()
-            self._sockets[data_source_name] = socket_client.init_socket()  # 加入字典并实例化
-            return self._sockets[data_source_name]
+            socket_client = data_source.sk_client()
+            self._sockets[data_source.name] = socket_client.init_socket()  # 加入字典并实例化
+            return self._sockets[data_source.name]
 
-    def get_socket(self, socket_name):
-        return self._sockets[socket_name]
+    def get_socket(self, data_source: DataSourceBase):
+        return self._sockets[data_source.name]
 
-    def close_socket(self, socket_name):
-        self._sockets[socket_name].close()
-        del self._sockets[socket_name]
+    def close_socket(self, data_source: DataSourceBase):
+        self._sockets[data_source.name].close()
+        del self._sockets[data_source.name]
 
-    def find(self, socket_name):
-        if socket_name in self._sockets:
+    def find(self, data_source: DataSourceBase):
+        if data_source.name in self._sockets:
             return True
         else:
             return False
 
 
-class DataSourceTdxLive(object):
-    name = ('tdx_live', TdxStdHqSocketClient)
+class DataSourceTdxLive(DataSourceBase):
+    name = 'tdx_live'
+    sk_client = TdxStdHqSocketClient
 
     @staticmethod
     @retry(stop_max_attempt_number=5)
@@ -69,7 +75,7 @@ class DataSourceTdxLive(object):
 
     @staticmethod
     @retry(stop_max_attempt_number=5)
-    def fetch_codelist(socket_client, market=Stock.Ashare):
+    def fetch_codelist(socket_client, market=Market.Ashare):
         def flitercode(code: str):
             if (code.startswith('51') or code.startswith('58')) and code[-1] != '0':
                 return 0
@@ -94,8 +100,9 @@ class DataSourceTdxLive(object):
         pass
 
 
-class DataSourceTdxLocal(object):
-    name = ('tdx_local', TdxStdReader)
+class DataSourceTdxLocal(DataSourceBase):
+    name = 'tdx_local'
+    sk_client = TdxStdReader
 
     @staticmethod
     def fetch_kdata(socket_client, code):
@@ -132,7 +139,7 @@ class LocalReaderAPI(object):
                 return df
 
     @staticmethod
-    def get_codelist(reader, market=Stock.Ashare):
+    def get_codelist(reader, market=Market.Ashare):
         try:
             datapath = reader.find_path_codelist(market)
             code_list = pd.read_csv(datapath, encoding='utf-8', dtype={'code': str, 'name': str, 'market': int})
@@ -141,6 +148,60 @@ class LocalReaderAPI(object):
             return pd.DataFrame(columns=['code', 'name', 'market'])
         else:
             return code_list
+
+    @staticmethod
+    def get_relavity_score_data(reader, market=Market.Ashare):
+        try:
+            fname = 'relavity_analyze_result.h5'
+            datapath = reader.find_path_anaresult(fname)
+            store = pd.HDFStore(datapath, mode='r', complib=HDF5_COMPLIB, complevel=HDF5_COMP_LEVEL)
+        except OSError as e:
+            print(e)
+            return pd.DataFrame(columns=['time', 'code', 'name', 'score'])
+        else:
+            key = anadata_store_market_transform(market)
+            try:
+                df = store.get(key=key)
+            except KeyError:
+                print("未储存此市场的数据:{}".format(key))
+                store.close()
+                return pd.DataFrame(columns=['time', 'code', 'name', 'score'])
+            else:
+                store.close()
+                return df
+
+    @staticmethod
+    def get_blocks_score_data(reader, market=Market.Ashare):
+        try:
+            fname = 'blocks_score_analyze_result.h5'
+            datapath = reader.find_path_anaresult(fname)
+            store = pd.HDFStore(datapath, mode='r', complib=HDF5_COMPLIB, complevel=HDF5_COMP_LEVEL)
+        except OSError as e:
+            print(e)
+            return pd.DataFrame(columns=['time', 'code', 'name', 'score'])
+        else:
+            key = anadata_store_market_transform(market)
+            try:
+                df = store.get(key=key)
+            except KeyError:
+                print("未储存此市场的数据:{}".format(key))
+                store.close()
+                return pd.DataFrame(columns=['time', 'code', 'name', 'score'])
+            else:
+                store.close()
+                return df
+
+    @staticmethod
+    def get_blocks_data(reader, market=Market.Ashare):
+        try:
+            datapath = reader.find_path_blocksdata(market)
+        except OSError as e:
+            print(e)
+            return dict()
+        else:
+            with open(datapath, 'r') as f:
+                res = json.load(f)
+            return res
 
 
 class LocalReader(object):
@@ -164,7 +225,7 @@ class LocalReader(object):
         """
         if self.localdir is None:
             raise RuntimeError("没有init socket")
-        market, market_type = self.market_transform(market)
+        market, market_type = kdata_store_market_transform(market)
         if market_type is None:
             fname = code + '.h5'
         else:
@@ -180,42 +241,49 @@ class LocalReader(object):
         自动匹配文件路径，辅助函数
         :return: path
         """
-
-        def market_transform(_market):
-            if _market is Stock.Ashare:
-                return 'ashare'
-            else:  # todo:增加不同市场类型
-                return 'future'
-
         if self.localdir is None:
             raise RuntimeError("没有init socket")
 
-        market_str = market_transform(market)
+        market_str = anadata_store_market_transform(market)
         path = Path('/'.join([self.localdir, 'code_list_' + market_str + '.csv']))
         if not Path(path).exists():
             raise OSError(f'未找到所需的文件: {path}')
         return path
 
-    @staticmethod
-    def market_transform(market):
-        if market in [Stock.Ashare.MarketSH, Stock.Ashare.MarketSH.STOCK, Stock.Ashare.MarketSH.ETF,
-                      Stock.Ashare.MarketSH.INDEX, Stock.Ashare.MarketSH.KCB]:
-            return 'Ashare', 'sh'
-        elif market in [Stock.Ashare.MarketSZ, Stock.Ashare.MarketSZ.STOCK, Stock.Ashare.MarketSZ.ETF,
-                        Stock.Ashare.MarketSZ.INDEX, Stock.Ashare.MarketSZ.CYB]:
-            return 'Ashare', 'sz'
-        else:
-            raise ValueError("错误的市场类型")
+    def find_path_anaresult(self, fname):
+        """
+        自动匹配文件路径，辅助函数
+        :return: path
+        """
+        if self.localdir is None:
+            raise RuntimeError("没有init socket")
+
+        path = Path('/'.join([self.localdir, 'AnalyzeData', fname]))
+        if not Path(path).exists():
+            raise OSError(f'未找到所需的文件: {path}')
+        return path
+
+    def find_path_blocksdata(self, market):
+
+        if self.localdir is None:
+            raise RuntimeError("没有init socket")
+
+        market_str = anadata_store_market_transform(market)
+        path = Path('/'.join([self.localdir, market_str + '_blocks_data.json']))
+        if not Path(path).exists():
+            raise OSError(f'未找到所需的文件: {path}')
+        return path
 
     def close(self):
         self.localdir = None
 
 
-class DataSourceLocal(object):
-    name = ('local', LocalReader)
+class DataSourceLocal(DataSourceBase):
+    name = 'local'
+    sk_client = LocalReader
 
     @staticmethod
-    def fetch_kdata(socket_client, code):
+    def fetch_kdata(socket_client, code) -> pd.DataFrame:
         fetched_kdata = socket_client.api.get_kdata(socket_client.socket,
                                                     code=code.code,
                                                     market=code.market,
@@ -228,11 +296,26 @@ class DataSourceLocal(object):
         return out_df
 
     @staticmethod
-    def fetch_codelist(socket_client, market):
+    def fetch_codelist(socket_client, market) -> pd.DataFrame:
         codelist = socket_client.api.get_codelist(socket_client.socket,
                                                   market=market)
 
         return codelist[['code', 'name', 'market']]
+
+    @staticmethod
+    def fetch_relavity_score_data(socket_client, market) -> pd.DataFrame:
+        res_df = socket_client.api.get_relavity_score_data(socket_client.socket, market=market)
+        return res_df
+
+    @staticmethod
+    def fetch_blocks_score_data(socket_client, market) -> pd.DataFrame:
+        res_df = socket_client.api.get_blocks_score_data(socket_client.socket, market=market)
+        return res_df
+
+    @staticmethod
+    def fetch_blocks_data(socket_client, market) -> dict:
+        res_dict = socket_client.api.get_blocks_data(socket_client.socket, market=market)
+        return res_dict
 
 
 class RequestGenerater(object):
@@ -249,7 +332,7 @@ class RequestGenerater(object):
             raise OSError('与远程服务器{} API测试连接错误！'.format(REMOTE_ADDR))
         return self
 
-    def generate_kdata_url(self, code: str, freq: str, market, st, et):
+    def generate_kdata_url(self, code: str, freq: str, market: Market, st, et):
         """
         自动匹配文件路径，辅助函数
         :return: path
@@ -271,32 +354,14 @@ class RequestGenerater(object):
         自动匹配文件路径，辅助函数
         :return: path
         """
-
-        def market_transform(_market):
-            if _market is Stock.Ashare:
-                return 'ashare'
-            else:  # todo:增加不同市场类型
-                return 'future'
-
         if self.remote_addr is None:
             raise RuntimeError("没有init socket")
 
-        market_str = market_transform(market)
+        market_str = anadata_store_market_transform(market)
         get_url = self.remote_addr + '/codelist/?'
         market_str = 'market=' + market_str
         get_url = get_url + market_str
         return get_url
-
-    @staticmethod
-    def market_transform(market):
-        if market in [Stock.Ashare.MarketSH, Stock.Ashare.MarketSH.STOCK, Stock.Ashare.MarketSH.ETF,
-                      Stock.Ashare.MarketSH.INDEX, Stock.Ashare.MarketSH.KCB]:
-            return 'Ashare', 'sh'
-        elif market in [Stock.Ashare.MarketSZ, Stock.Ashare.MarketSZ.STOCK, Stock.Ashare.MarketSZ.ETF,
-                        Stock.Ashare.MarketSZ.INDEX, Stock.Ashare.MarketSZ.CYB]:
-            return 'Ashare', 'sz'
-        else:
-            raise ValueError("错误的市场类型")
 
     def close(self):
         self.remote_addr = None
@@ -320,7 +385,7 @@ class RemoteServerAPI(object):
             raise ValueError("VQapi返回msg 为 false")
 
     @staticmethod
-    def get_codelist(req_generater, market=Stock.Ashare):
+    def get_codelist(req_generater, market=Market.Ashare):
         get_url = req_generater.generate_codelist_url(market=market)
         resp = requests.get(get_url).content
         data = json.loads(resp)
@@ -330,8 +395,9 @@ class RemoteServerAPI(object):
             raise ValueError("VQapi返回msg 为 false")
 
 
-class DataSourceVQAPI(object):
-    name = ('VQAPI', RequestGenerater)
+class DataSourceVQAPI(DataSourceBase):
+    name = 'VQAPI'
+    sk_client = RequestGenerater
 
     @staticmethod
     def fetch_kdata(socket_client, code):
@@ -356,41 +422,6 @@ class DataSourceVQAPI(object):
                                                   market=market)
 
         return codelist[['code', 'name', 'market']]
-
-
-class AnalyzeDataReader:
-    def __init__(self):
-        self.localdir = Path('/'.join([LOCAL_DIR, 'AnalyzeData']))
-
-    def get_relavity_score_data(self, key='Ashare'):
-        fname = 'relavity_analyze_result.h5'
-        try:
-            datapath = self.find_path_anaresult(fname)
-            store = pd.HDFStore(datapath, mode='r', complib=HDF5_COMPLIB, complevel=HDF5_COMP_LEVEL)
-        except OSError as e:
-            print(e)
-            return pd.DataFrame(columns=['time', 'code', 'name', 'score'])
-        else:
-            try:
-                df = store.get(key=key)
-            except KeyError:
-                print("未储存此市场的数据:{}".format(key))
-                store.close()
-                return pd.DataFrame(columns=['time', 'code', 'name', 'score'])
-            else:
-                store.close()
-                return df
-
-    def find_path_anaresult(self, fname):
-        """
-        自动匹配文件路径，辅助函数
-        :return: path
-        """
-
-        path = Path('/'.join([self.localdir, fname]))
-        if not Path(path).exists():
-            raise OSError(f'未找到所需的文件: {path}')
-        return path
 
 
 def mergeKdata(kdata, period, new_period):
@@ -444,7 +475,7 @@ if __name__ == '__main__':
     # test_stock_list = test_code.data_source_live.fetch_codelist(test_socket_client_live)
     # from VisionQuant.DataCenter.DataStore import store_code_list_stock
     #
-    # store_code_list_stock(test_stock_list, Stock.Ashare)
+    # store_code_list_stock(test_stock_list, Market.Ashare)
 
     from VisionQuant.DataCenter.DataStore import store_kdata_to_hdf5
     from VisionQuant.DataStruct.AShare import AShare
@@ -465,5 +496,5 @@ if __name__ == '__main__':
     # t2 = time.perf_counter()
     # print(t2 - t1)
     # print(test_fetch_data)
-    # test_stock_list_local = new_test_code.data_source_local.fetch_codelist(test_socket_client_local, Stock.Ashare)
+    # test_stock_list_local = new_test_code.data_source_local.fetch_codelist(test_socket_client_local, Market.Ashare)
     # print(test_stock_list_local)
