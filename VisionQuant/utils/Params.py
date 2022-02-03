@@ -11,6 +11,8 @@ DATASERVER_MAX_COUNT = int(CfgTool.get_cfg('DataServer', 'max_count'))
 
 HQSERVER_HOST = CfgTool.get_cfg('HqServer', 'host')
 HQSERVER_PORT = int(CfgTool.get_cfg('HqServer', 'port'))
+HQCLIENT_HOST = CfgTool.get_cfg('HqClient', 'host')
+HQCLIENT_PORT = int(CfgTool.get_cfg('HqClient', 'port'))
 RESPONSE_HEADER_LEN = 10
 REQUEST_HEADER_LEN = 10
 REQUEST_HEAD_KDATA = 0X01
