@@ -8,6 +8,6 @@ def getdata_from_json(jsdata, orient='records', **kwargs):
     return df
 
 
-def to_json(dfdata, orient='records'):
+def df_to_json(dfdata, orient='records'):
     jsdata = dfdata.to_json(orient=orient)
     return jsdata

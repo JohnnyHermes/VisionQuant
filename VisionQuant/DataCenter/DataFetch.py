@@ -1,5 +1,7 @@
+import gzip
 import json
 import time
+import zlib
 
 import numpy as np
 import requests
@@ -354,9 +356,9 @@ class RequestGenerater(object):
         self.socket = self
         self.api = RemoteServerAPI()
 
-    def init_socket(self):
-        if requests.get(REMOTE_ADDR).status_code == 200:
-            self.remote_addr = REMOTE_ADDR
+    def init_socket(self, remote_addr=REMOTE_ADDR):
+        if requests.get(remote_addr).status_code == 200:
+            self.remote_addr = remote_addr
         else:
             raise OSError('与远程服务器{} API测试连接错误！'.format(REMOTE_ADDR))
         return self
@@ -392,6 +394,42 @@ class RequestGenerater(object):
         get_url = get_url + market_str
         return get_url
 
+    def generate_blocks_data_url(self, market):
+        if self.remote_addr is None:
+            raise RuntimeError("没有init socket")
+        market_str = anadata_store_market_transform(market)
+        get_url = self.remote_addr + '/blockdata/?'
+        market_str = 'market=' + market_str
+        get_url = get_url + market_str
+        return get_url
+
+    def generate_relavity_anadata_url(self, market):
+        if self.remote_addr is None:
+            raise RuntimeError("没有init socket")
+        market_str = anadata_store_market_transform(market)
+        get_url = self.remote_addr + '/anadata/relavity/?'
+        market_str = 'market=' + market_str
+        get_url = get_url + market_str
+        return get_url
+
+    def generate_blocks_score_data_url(self, market):
+        if self.remote_addr is None:
+            raise RuntimeError("没有init socket")
+        market_str = anadata_store_market_transform(market)
+        get_url = self.remote_addr + '/anadata/blocksscore/?'
+        market_str = 'market=' + market_str
+        get_url = get_url + market_str
+        return get_url
+
+    def generate_basic_finance_data_url(self, market):
+        if self.remote_addr is None:
+            raise RuntimeError("没有init socket")
+        market_str = anadata_store_market_transform(market)
+        get_url = self.remote_addr + '/financedata/basic/?'
+        market_str = 'market=' + market_str
+        get_url = get_url + market_str
+        return get_url
+
     def close(self):
         self.remote_addr = None
 
@@ -409,7 +447,7 @@ class RemoteServerAPI(object):
         data = json.loads(resp)
         if data['msg'] == 'success':
             kdata = data['data']
-            return JsonTool.getdata_from_json(kdata)
+            return JsonTool.getdata_from_json(kdata, orient='split')
         else:
             raise ValueError("VQapi返回msg 为 false")
 
@@ -419,7 +457,55 @@ class RemoteServerAPI(object):
         resp = requests.get(get_url).content
         data = json.loads(resp)
         if data['msg'] == 'success':
-            return JsonTool.getdata_from_json(data['data'], dtype={'code': str, 'name': str, 'market': int})
+            return JsonTool.getdata_from_json(data['data'], orient='split',
+                                              dtype={'code': str, 'name': str, 'market': int})
+        else:
+            raise ValueError("VQapi返回msg 为 false")
+
+    @staticmethod
+    def get_blocks_data(req_generater, market=Market.Ashare):
+        get_url = req_generater.generate_blocks_data_url(market=market)
+        resp = requests.get(get_url).content
+        data = json.loads(resp)
+        if data['msg'] == 'success':
+            return json.loads(data['data'])
+        else:
+            raise ValueError("VQapi返回msg 为 false")
+
+    @staticmethod
+    def get_relavity_score_data(req_generater, market=Market.Ashare):
+        get_url = req_generater.generate_relavity_anadata_url(market=market)
+        resp = requests.get(get_url).content
+        data = json.loads(resp)
+        if data['msg'] == 'success':
+            content = data['data']
+            return JsonTool.getdata_from_json(content, orient='split',
+                                              dtype={'time': str, 'code': str, 'name': str, 'score': int})
+        else:
+            raise ValueError("VQapi返回msg 为 false")
+
+    @staticmethod
+    def get_blocks_score_data(req_generater, market=Market.Ashare):
+        get_url = req_generater.generate_blocks_score_data_url(market=market)
+        resp = requests.get(get_url).content
+        data = json.loads(resp)
+        if data['msg'] == 'success':
+            content = data['data']
+            return JsonTool.getdata_from_json(content, orient='split',
+                                              dtype={'category': str, 'time': str, 'name': str,
+                                                     'stk_count': int, 'score': int, 'rise_count': int})
+        else:
+            raise ValueError("VQapi返回msg 为 false")
+
+    @staticmethod
+    def get_basic_finance_data(req_generater, market=Market.Ashare):
+        get_url = req_generater.generate_basic_finance_data_url(market=market)
+        resp = requests.get(get_url).content
+        data = json.loads(resp)
+        if data['msg'] == 'success':
+            return JsonTool.getdata_from_json(data['data'], orient='split',
+                                              dtype={'代码': str, '流通股本': float,
+                                                                   '市盈率-动态': float, '市净率': float})
         else:
             raise ValueError("VQapi返回msg 为 false")
 
@@ -451,6 +537,28 @@ class DataSourceVQAPI(DataSourceBase):
                                                   market=market)
 
         return codelist[['code', 'name', 'market']]
+
+    @staticmethod
+    def fetch_basic_finance_data(socket_client, market) -> pd.DataFrame:
+        data_df = socket_client.api.get_basic_finance_data(socket_client.socket,
+                                                           market=market)
+
+        return data_df
+
+    @staticmethod
+    def fetch_relavity_score_data(socket_client, market) -> pd.DataFrame:
+        res_df = socket_client.api.get_relavity_score_data(socket_client.socket, market=market)
+        return res_df
+
+    @staticmethod
+    def fetch_blocks_score_data(socket_client, market) -> pd.DataFrame:
+        res_df = socket_client.api.get_blocks_score_data(socket_client.socket, market=market)
+        return res_df
+
+    @staticmethod
+    def fetch_blocks_data(socket_client, market) -> dict:
+        res_dict = socket_client.api.get_blocks_data(socket_client.socket, market=market)
+        return res_dict
 
 
 def mergeKdata(kdata, period, new_period):
