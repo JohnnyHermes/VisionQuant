@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 import uvicorn
 
-from VisionQuant.DataCenter.DataServer import DataServer
 from VisionQuant.utils.Code import Code
 from VisionQuant.utils import TimeTool, JsonTool
-from VisionQuant.DataCenter.DataFetch import DataSource, SocketClientsManager
+from VisionQuant.DataCenter.DataFetch import DataSource
 from VisionQuant.utils.Params import Market
+from VisionQuant.Market.HqClient import HqClient
 
-data_server = DataServer()
+hq_client = HqClient()
 
 # 类似于 app = Flask(__name__)
 app = FastAPI()
@@ -29,7 +29,7 @@ def fetch_kdata(code: str, freq: str, market: int, st: str, et: str):
                     data_source={'local': DataSource.Local.Default,
                                  'live': DataSource.Live.VQtdx}
                     )
-    data_struct = data_server.get_data(tmp_code)
+    data_struct = hq_client.get_kdata(tmp_code)
     kdata = data_struct.get_kdata(freq).data
     # 时间序列化，转换为字符串
     kdata['time'] = kdata['time'].apply(TimeTool.time_to_str, args=('%Y%m%d%H%M%S',))
@@ -39,9 +39,8 @@ def fetch_kdata(code: str, freq: str, market: int, st: str, et: str):
 
 @app.get("/codelist/")
 def fetch_codelist(market: str):
-    sk_client_mng = SocketClientsManager()
     if market == 'ashare':
-        sk = sk_client_mng.init_socket(*DataSource.Local.Default.name)
+        sk = DataSource.Local.Default.sk_client().init_socket()
         ashare_codelist = DataSource.Local.Default.fetch_codelist(sk, market=Market.Ashare)
         resp = JsonTool.to_json(ashare_codelist)
         return {'msg': 'success', 'data': resp}

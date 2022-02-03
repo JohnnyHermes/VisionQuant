@@ -2,8 +2,9 @@
 import socket
 import pickle
 import struct
+
 from VisionQuant.utils.Params import RESPONSE_HEADER_LEN, REQUEST_HEAD_KDATA, REQUEST_HEAD_DATASERVER_SETTINGS, \
-    REQUEST_HEAD_BASIC_FINANCE_DATA, HQCLIENT_HOST, HQCLIENT_PORT
+    REQUEST_HEAD_BASIC_FINANCE_DATA, HQSERVER_HOST, HQSERVER_PORT
 
 
 class ResponseHeaderRecvFailed(Exception):
@@ -15,7 +16,7 @@ class ResponseBodyRecvFailed(Exception):
 
 
 class HqClient:
-    def __init__(self, addr=(HQCLIENT_HOST, HQCLIENT_PORT)):
+    def __init__(self, addr=(HQSERVER_HOST, HQSERVER_PORT)):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket_addr = addr
 

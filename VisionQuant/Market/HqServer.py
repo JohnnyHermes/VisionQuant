@@ -40,14 +40,14 @@ class HqServerHandler(socketserver.BaseRequestHandler):
                     code = pickle.loads(body_buf)
                     kdata = data_server.get_data(code)
                     response_body = pickle.dumps(kdata)
-                    response_header = struct.pack('>HII', REQUEST_HEAD_KDATA, 65536, len(response_body))
+                    response_header = struct.pack('>HII', REQUEST_HEAD_KDATA, 102400, len(response_body))
                     self.request.sendall(response_header)
                     self.request.sendall(response_body)
                 elif head == REQUEST_HEAD_BASIC_FINANCE_DATA:
                     code = pickle.loads(body_buf)
                     fian_data = data_server.get_basic_finance_data(code)
                     response_body = pickle.dumps(fian_data)
-                    response_header = struct.pack('>HII', REQUEST_HEAD_BASIC_FINANCE_DATA, 8192, len(response_body))
+                    response_header = struct.pack('>HII', REQUEST_HEAD_BASIC_FINANCE_DATA, 10240, len(response_body))
                     self.request.sendall(response_header)
                     self.request.sendall(response_body)
                 elif head == REQUEST_HEAD_DATASERVER_SETTINGS:
@@ -69,7 +69,7 @@ class HqServerHandler(socketserver.BaseRequestHandler):
 
 
 if __name__ == '__main__':
-    with socketserver.TCPServer((HQSERVER_HOST, HQSERVER_PORT), HqServerHandler) as server:
+    with socketserver.ThreadingTCPServer((HQSERVER_HOST, HQSERVER_PORT), HqServerHandler) as server:
         # Activate the server; this will keep running until you
         # interrupt the program with Ctrl-C
         print("行情服务器启动 host:{} port: {}".format(HQSERVER_HOST, HQSERVER_PORT))
