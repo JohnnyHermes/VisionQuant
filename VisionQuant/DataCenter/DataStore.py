@@ -76,8 +76,13 @@ def store_code_list_stock(list_df, market):
     list_df.to_csv(fpath, encoding='utf-8', index=False)
 
 
-def store_blocks_data(data: dict, market=Market.Ashare):
+def store_basic_finance_data(df, market):
+    market_str = anadata_store_market_transform(market)
+    fpath = Path('/'.join([LOCAL_DIR, 'AnalyzeData', market_str + '_basic_finance_data.csv']))
+    df.to_csv(fpath, encoding='utf-8', index=False)
 
+
+def store_blocks_data(data: dict, market=Market.Ashare):
     market_str = anadata_store_market_transform(market)
     fpath = Path('/'.join([LOCAL_DIR, market_str + '_blocks_data.json']))
     with open(fpath, 'w+') as f:

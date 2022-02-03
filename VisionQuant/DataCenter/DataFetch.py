@@ -150,6 +150,18 @@ class LocalReaderAPI(object):
             return code_list
 
     @staticmethod
+    def get_basic_finance_data(reader, market=Market.Ashare):
+        try:
+            datapath = reader.find_path_basic_finance_data(market)
+            data_df = pd.read_csv(datapath, encoding='utf-8', dtype={'代码': str, '流通股本': float,
+                                                                     '市盈率-动态': float, '市净率': float})
+        except OSError as e:
+            print(e)
+            return pd.DataFrame(columns=["代码", '流通股本', '市盈率-动态', "市净率"])
+        else:
+            return data_df
+
+    @staticmethod
     def get_relavity_score_data(reader, market=Market.Ashare):
         try:
             fname = 'relavity_analyze_result.h5'
@@ -250,6 +262,16 @@ class LocalReader(object):
             raise OSError(f'未找到所需的文件: {path}')
         return path
 
+    def find_path_basic_finance_data(self, market):
+        if self.localdir is None:
+            raise RuntimeError("没有init socket")
+
+        market_str = anadata_store_market_transform(market)
+        path = Path('/'.join([self.localdir, 'AnalyzeData', market_str + '_basic_finance_data.csv']))
+        if not Path(path).exists():
+            raise OSError(f'未找到所需的文件: {path}')
+        return path
+
     def find_path_anaresult(self, fname):
         """
         自动匹配文件路径，辅助函数
@@ -301,6 +323,13 @@ class DataSourceLocal(DataSourceBase):
                                                   market=market)
 
         return codelist[['code', 'name', 'market']]
+
+    @staticmethod
+    def fetch_basic_finance_data(socket_client, market) -> pd.DataFrame:
+        data_df = socket_client.api.get_basic_finance_data(socket_client.socket,
+                                                           market=market)
+
+        return data_df
 
     @staticmethod
     def fetch_relavity_score_data(socket_client, market) -> pd.DataFrame:

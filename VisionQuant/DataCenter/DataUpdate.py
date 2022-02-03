@@ -10,7 +10,7 @@ from VisionQuant.DataCenter.DataStore import store_kdata_to_hdf5
 from VisionQuant.DataCenter.DataFetch import DataSource
 from VisionQuant.utils.Params import Market
 from VisionQuant.DataCenter.CodePool import AshareCodePool
-from VisionQuant.DataCenter.DataStore import store_code_list_stock, store_blocks_data
+from VisionQuant.DataCenter.DataStore import store_code_list_stock, store_blocks_data, store_basic_finance_data
 
 data_server = DataServer()
 
@@ -337,6 +337,73 @@ def get_all_cons_em() -> list:
     return res
 
 
+def update_basic_finance_data():
+    """
+    东方财富网-沪深京 A 股-实时行情
+    http://quote.eastmoney.com/center/gridlist.html#hs_a_board
+    :return: 实时行情
+    :rtype: pandas.DataFrame
+    """
+    url = "http://82.push2.eastmoney.com/api/qt/clist/get"
+    params = {
+        "pn": "1",
+        "pz": "5000",
+        "po": "1",
+        "np": "1",
+        "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+        "fltt": "2",
+        "invt": "2",
+        "fid": "f3",
+        "fs": "m:0 t:6,m:0 t:80,m:1 t:2,m:1 t:23,m:0 t:81 s:2048",
+        "fields": "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,f23,f24,f25,f22,f11,f62,f128,f136,f115,f152",
+        "_": "1623833739532",
+    }
+    r = requests.get(url, params=params)
+    data_json = r.json()
+    if not data_json["data"]["diff"]:
+        return list()
+    temp_df = pd.DataFrame(data_json["data"]["diff"])
+    temp_df.columns = [
+        "_",
+        "最新价",
+        "涨跌幅",
+        "涨跌额",
+        "成交量",
+        "成交额",
+        "振幅",
+        "换手率",
+        "市盈率-动态",
+        "量比",
+        "_",
+        "代码",
+        "_",
+        "名称",
+        "最高",
+        "最低",
+        "今开",
+        "昨收",
+        "_",
+        "_",
+        "_",
+        "市净率",
+        "_",
+        "_",
+        "_",
+        "_",
+        "_",
+        "_",
+        "_",
+        "_",
+        "_",
+    ]
+    temp_df["换手率"] = pd.to_numeric(temp_df["换手率"], errors="coerce")
+    temp_df["市盈率-动态"] = pd.to_numeric(temp_df["市盈率-动态"], errors="coerce")
+    temp_df["市净率"] = pd.to_numeric(temp_df["市净率"], errors="coerce")
+    temp_df['流通股本'] = temp_df['成交量'] * 10000 / temp_df['换手率']
+    res_df = temp_df[["代码", '流通股本', '市盈率-动态', "市净率"]]
+    return res_df
+
+
 def update_ashare_blocks():
     gn_names = get_gn_names_em()
     hy_names = get_hy_names_em()
@@ -373,8 +440,10 @@ if __name__ == '__main__':
     #     update_single_stock(_code)
     #     print("update kdata success: {}".format(_code.code))
 
-    # 更新板块数据
-    blocks_data = update_ashare_blocks()
-    store_blocks_data(blocks_data,Market.Ashare)
+    # # 更新板块数据
+    # blocks_data = update_ashare_blocks()
+    # store_blocks_data(blocks_data, Market.Ashare)
+    basic_finance_data = update_basic_finance_data()
+    store_basic_finance_data(basic_finance_data, Market.Ashare)
 
     print('update ok')

@@ -6,7 +6,7 @@ from VisionQuant.DataCenter import DataFetch
 from VisionQuant.DataStruct.AShare import AShare
 from VisionQuant.utils.Code import Code
 from VisionQuant.utils import TimeTool
-from VisionQuant.utils.Params import DATASERVER_MAX_COUNT
+from VisionQuant.utils.Params import DATASERVER_MAX_COUNT, Market
 
 
 class DataServer:
@@ -158,7 +158,7 @@ class DataServer:
                         freq = codes.frequency
                     else:
                         freq = codes.frequency[0]
-                    if self.data_dict[codes.code].get_kdata(freq).get_start_time() >\
+                    if self.data_dict[codes.code].get_kdata(freq).get_start_time() > \
                             TimeTool.time_standardization(codes.start_time):
                         self.add_data(codes)
                     tmp_datastruct = self.data_dict[codes.code].fliter(key='time',
@@ -198,32 +198,53 @@ class DataServer:
         return self.data_dict[code.code]
 
     def get_basic_finance_data(self, code):
+        if code.market not in [Market.Ashare.MarketSH.STOCK, Market.Ashare.MarketSZ.STOCK]:
+            return None
         if self.basic_finance_data is None:
-            res = dict()
-            from VisionQuant.utils.Params import Market
-            if code.market in [Market.Ashare.MarketSH.STOCK, Market.Ashare.MarketSZ.STOCK]:
-                from mootdx.quotes import Quotes
-                client = Quotes.factory(market='std')
-                data1 = client.F10(symbol=code.code, name='股本结构')
-                start_index = data1.find("实际流通A股")
-                data2 = data1[start_index:data1.find('\r\n', start_index)]
-                data2 = data2.split('│')
-                data2 = list(map(lambda s: s.strip(), data2))
-                final_data = round(float(data2[1]) * 10000)
-                res['流通股本'] = final_data
-                return res
+            from VisionQuant.DataCenter.DataFetch import DataSource
+            data_source = DataSource.Local.Default
+            sk = self.sk_client_mng.init_socket(data_source)
+            self.basic_finance_data = data_source.fetch_basic_finance_data(sk, Market.Ashare)
+            if len(self.basic_finance_data) == 0:
+                return None
+                # res = dict()
+                # if code.market in [Market.Ashare.MarketSH.STOCK, Market.Ashare.MarketSZ.STOCK]:
+                #     from mootdx.quotes import Quotes
+                #     client = Quotes.factory(market='std')
+                #     data1 = client.F10(symbol=code.code, name='股本结构')
+                #     start_index = data1.find("实际流通A股")
+                #     data2 = data1[start_index:data1.find('\r\n', start_index)]
+                #     data2 = data2.split('│')
+                #     data2 = list(map(lambda s: s.strip(), data2))
+                #     final_data = round(float(data2[1]) * 10000)
+                #     res['流通股本'] = final_data
+                #     return res
+                # else:
+                #     return res
             else:
+                code_line = self.basic_finance_data[self.basic_finance_data['代码'] == code.code]
+                if len(code_line) == 0:
+                    return None
+                res = dict()
+                for key in ('流通股本', '市盈率-动态', "市净率"):
+                    res[key] = code_line[key].values[0]
                 return res
         else:
-            pass
-            # todo:本地读取
+            code_line = self.basic_finance_data[self.basic_finance_data['代码'] == code.code]
+            if len(code_line) == 0:
+                return None
+            res = dict()
+            for key in ('流通股本', '市盈率-动态', "市净率"):
+                res[key] = code_line[key].values[0]
+            return res
 
-    # todo:这个函数暂时没用
-    @staticmethod
-    def _is_up_to_date(data):
-        max_time_delta = 10
-        is_live = TimeTool.is_trade_time(1)  # todo:修改市场信息
-        if TimeTool.get_now_time() - data.get_last_time(is_live) > max_time_delta:
-            return False
-        else:
-            return True
+    def configure(self, settings_dict: dict):
+        if 'force_live' in settings_dict.keys():
+            self.force_live = settings_dict['force_live']
+            print("修改参数force_live为{}".format(self.force_live))
+        if 'max_count' in settings_dict.keys():
+            self.max_count = settings_dict['max_count']
+            print("修改参数force_live为{}".format(self.max_count))
+        if 'clean_data' in settings_dict.keys():
+            self.clean_data()
+            print("清除缓存数据！")

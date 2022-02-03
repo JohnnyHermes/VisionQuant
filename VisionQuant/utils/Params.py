@@ -3,11 +3,19 @@ from VisionQuant.utils import CfgTool
 TDX_DIR = CfgTool.get_cfg('DataSource', 'tdx_dir')
 LOCAL_DIR = CfgTool.get_cfg('DataSource', 'local_dir')
 REMOTE_ADDR = CfgTool.get_cfg('DataSource', 'remote_addr')
-DEFAULT_ASHARE_LOCAL_DATASOURCE= CfgTool.get_cfg('DataSource', 'ashare_local_source')
-DEFAULT_ASHARE_LIVE_DATASOURCE= CfgTool.get_cfg('DataSource', 'ashare_live_source')
+DEFAULT_ASHARE_LOCAL_DATASOURCE = CfgTool.get_cfg('DataSource', 'ashare_local_source')
+DEFAULT_ASHARE_LIVE_DATASOURCE = CfgTool.get_cfg('DataSource', 'ashare_live_source')
 HDF5_COMPLIB = 'blosc:zstd'
 HDF5_COMP_LEVEL = 5
 DATASERVER_MAX_COUNT = int(CfgTool.get_cfg('DataServer', 'max_count'))
+
+HQSERVER_HOST = CfgTool.get_cfg('HqServer', 'host')
+HQSERVER_PORT = int(CfgTool.get_cfg('HqServer', 'port'))
+RESPONSE_HEADER_LEN = 10
+REQUEST_HEADER_LEN = 10
+REQUEST_HEAD_KDATA = 0X01
+REQUEST_HEAD_DATASERVER_SETTINGS = 0xaa
+REQUEST_HEAD_BASIC_FINANCE_DATA = 0x10
 
 """
 Market Type 市场类型

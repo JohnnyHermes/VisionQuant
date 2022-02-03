@@ -124,6 +124,15 @@ def is_trade_time(market):
         return 0
 
 
+def get_start_time(end_time, **kwargs):
+    if isinstance(end_time, str):
+        end_time = str_to_dt(end_time)
+    elif isinstance(end_time, np.datetime64):
+        end_time = npdt64_to_dt(end_time)
+    start_time = end_time - datetime.timedelta(**kwargs)
+    return dt_to_npdt64(start_time)
+
+
 def time_delta(t1, t2):
     if isinstance(t1, datetime.datetime):
         t1 = dt_to_npdt64(t1)
