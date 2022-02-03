@@ -94,7 +94,9 @@ class Relativity(StrategyBase):
         t_read_data = time.perf_counter() - t
 
         t = time.perf_counter()
-        self.time_grav = relavity_cy.TimeGravitation(high, low, min_step=self.min_step, max_level=RELAVITY_MAX_LEVEL)
+        self.time_grav = relavity_cy.TimeGravitation(high, low,
+                                                     min_step=self.min_step,
+                                                     max_level=int(RELAVITY_MAX_LEVEL))
         # print('calc particle', time.perf_counter() - t)
         #
         # t = time.perf_counter()

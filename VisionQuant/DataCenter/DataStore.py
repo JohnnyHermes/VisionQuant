@@ -86,4 +86,4 @@ def store_blocks_data(data: dict, market=Market.Ashare):
     market_str = anadata_store_market_transform(market)
     fpath = Path('/'.join([LOCAL_DIR, market_str + '_blocks_data.json']))
     with open(fpath, 'w+') as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+        json.dump(data, f, indent=4)

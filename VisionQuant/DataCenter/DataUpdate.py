@@ -441,9 +441,9 @@ if __name__ == '__main__':
     #     print("update kdata success: {}".format(_code.code))
 
     # # 更新板块数据
-    # blocks_data = update_ashare_blocks()
-    # store_blocks_data(blocks_data, Market.Ashare)
-    basic_finance_data = update_basic_finance_data()
-    store_basic_finance_data(basic_finance_data, Market.Ashare)
+    blocks_data = update_ashare_blocks()
+    store_blocks_data(blocks_data, Market.Ashare)
+    # basic_finance_data = update_basic_finance_data()
+    # store_basic_finance_data(basic_finance_data, Market.Ashare)
 
     print('update ok')
