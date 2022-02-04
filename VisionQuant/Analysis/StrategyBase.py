@@ -3,15 +3,18 @@ from VisionQuant.utils.Params import OrderLifeTime
 
 
 class StrategyBase:
-    def __init__(self, code, local_data=None, show_result=False):
+    def __init__(self, code, local_data=None, local_basic_finance_data=None, show_result=False):
         self.code = code
         self.data_struct = None
+        self.basic_finance_data = None
         self.hq_client = None
         self.show_result = show_result
         if local_data is not None:
             self.data_struct = local_data
         else:
             self.hq_client = HqClient()
+        if local_basic_finance_data is not None:
+            self.basic_finance_data = local_basic_finance_data
 
     def get_data(self):
         if self.data_struct is not None:
@@ -23,6 +26,8 @@ class StrategyBase:
         return self.get_data().get_kdata(period)
 
     def get_basic_finance_data(self):
+        if self.basic_finance_data is not None:
+            return self.basic_finance_data
         res = self.hq_client.get_basic_finance_data(self.code)
         if res:
             return res

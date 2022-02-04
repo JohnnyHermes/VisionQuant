@@ -337,7 +337,7 @@ def get_all_cons_em() -> list:
     return res
 
 
-def update_basic_finance_data():
+def get_basic_finance_data() -> pd.DataFrame:
     """
     东方财富网-沪深京 A 股-实时行情
     http://quote.eastmoney.com/center/gridlist.html#hs_a_board
@@ -404,7 +404,7 @@ def update_basic_finance_data():
     return res_df
 
 
-def update_ashare_blocks():
+def get_ashare_blocks():
     gn_names = get_gn_names_em()
     hy_names = get_hy_names_em()
     res = {'按行业分类': dict(), '按概念分类': dict()}

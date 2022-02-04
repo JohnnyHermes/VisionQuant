@@ -27,8 +27,8 @@ from VisionQuant.utils import TimeTool
 from VisionQuant.utils.Code import Code
 import datetime
 from VisionQuant.DataCenter.DataFetch import DataSource
-from VisionQuant.Analysis.Relavity.Relavity import Relativity
-from VisionQuant.Analysis.Relavity import relavity_cy
+from VisionQuant.Analysis.Relativity.Relativity import Relativity
+from VisionQuant.Analysis.Relativity import relativity_cy
 from VisionQuant.utils.Params import Market
 
 curdoc().theme = 'dark_minimal'
@@ -327,9 +327,9 @@ def draw_main_ax():
     main_ax_line_source_dict[0].js_on_change('data', ds_change_callback)
 
 
-def get_relavity_score_data(market=Market.Ashare):
+def get_relativity_score_data(market=Market.Ashare):
     sk = data_source.sk_client().init_socket()
-    res_data = data_source.fetch_relavity_score_data(sk, market=market)
+    res_data = data_source.fetch_relativity_score_data(sk, market=market)
     return res_data
 
 
@@ -569,7 +569,7 @@ def update_score_ax(name, new_data):
     score_ax_ds.data = new_data
 
 
-source_data = get_relavity_score_data()
+source_data = get_relativity_score_data()
 get_score_details()
 
 code_pool = AshareCodePool()

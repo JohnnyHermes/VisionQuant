@@ -20,11 +20,12 @@ nptype_time_grav = np.dtype(
     [('start_point', nptype_point), ('end_point', nptype_point), ('volume', np.float64), ('flag', np.bool_)])
 nptype_space_grav = np.dtype([('price', np.float64), ('volume', np.float64)])
 nptype_zcyl = np.dtype([('price', np.float64), ('ratio', np.float64), ('last_point_index', np.uint32)])
-# save_dir = 'D:/OneDrives/onedrive_102/OneDrive/策略log/Relavity/'
-save_dir = 'E:/Onedrive/策略log/Relavity/'
+# save_dir = 'D:/OneDrives/onedrive_102/OneDrive/策略log/Relativity/'
+save_dir = 'E:/Onedrive/策略log/Relativity/'
 # 引入pyc模块
-from VisionQuant.Analysis.Relavity import relavity_cy
-RELAVITY_MAX_LEVEL = 7
+from VisionQuant.Analysis.Relativity import relativity_cy
+
+RELATIVITY_MAX_LEVEL = 7
 
 
 def get_peaks(zcyl_list):
@@ -54,8 +55,8 @@ def equalize(data, bins=20):
 
 
 class Relativity(StrategyBase):
-    def __init__(self, code, local_data=None, show_result=False):
-        super().__init__(code, local_data, show_result)
+    def __init__(self, code, local_data=None, local_basic_finance_data=None, show_result=False):
+        super().__init__(code, local_data, local_basic_finance_data, show_result)
         self.kdata = None
         self.space_grav = None
         self.time_grav = None
@@ -65,7 +66,7 @@ class Relativity(StrategyBase):
         self.last_time = None
         self.last_price = None
         self.last_index = None
-        self.max_level = RELAVITY_MAX_LEVEL
+        self.max_level = RELATIVITY_MAX_LEVEL
         self.min_step = 0.01
 
     def analyze(self):
@@ -94,9 +95,9 @@ class Relativity(StrategyBase):
         t_read_data = time.perf_counter() - t
 
         t = time.perf_counter()
-        self.time_grav = relavity_cy.TimeGravitation(high, low,
-                                                     min_step=self.min_step,
-                                                     max_level=int(RELAVITY_MAX_LEVEL))
+        self.time_grav = relativity_cy.TimeGravitation(high, low,
+                                                       min_step=self.min_step,
+                                                       max_level=int(RELATIVITY_MAX_LEVEL))
         # print('calc particle', time.perf_counter() - t)
         #
         # t = time.perf_counter()
@@ -118,16 +119,16 @@ class Relativity(StrategyBase):
         #     print(x[idx])
         #     plt.plot(x, cdf)
         # plt.show()
-        # line_dist3 = relavity_cy.calc_line_list(self.time_grav.get_points(2), volume)
-        # line_dist2 = relavity_cy.calc_line_list(self.time_grav.get_points(1), volume)
-        # line_dist1 = relavity_cy.calc_line_list(self.time_grav.get_points(0), volume)
+        # line_dist3 = relativity_cy.calc_line_list(self.time_grav.get_points(2), volume)
+        # line_dist2 = relativity_cy.calc_line_list(self.time_grav.get_points(1), volume)
+        # line_dist1 = relativity_cy.calc_line_list(self.time_grav.get_points(0), volume)
         # print('calc line dist', time.perf_counter() - t)
         # t = time.perf_counter()
-        self.space_grav = relavity_cy.SpaceGravitation(high, low, volume, all_capital, min_price_step=self.min_step)
-        qhs_index = relavity_cy.calc_qhs_index(volume, all_capital)
+        self.space_grav = relativity_cy.SpaceGravitation(high, low, volume, all_capital, min_price_step=self.min_step)
+        qhs_index = relativity_cy.calc_qhs_index(volume, all_capital)
         cm_dist0 = self.space_grav.get_grav_dist(self.last_index)
         cm_dist1 = self.space_grav.get_grav_dist(self.last_index, start_index=qhs_index[0])
-        # cm_dist0, cm_dist1 = relavity_cy.calc_CM_combine(high, low, volume, all_capital, min_price_step=min_step)
+        # cm_dist0, cm_dist1 = relativity_cy.calc_CM_combine(high, low, volume, all_capital, min_price_step=min_step)
         # print('calc cm dist', time.perf_counter() - t)
         # t = time.perf_counter()
         self.indicators = []
@@ -276,7 +277,7 @@ class Relativity(StrategyBase):
         t_analyze = time.perf_counter() - t
         print("分析{}完成, 读取数据用时:{:.4f}s 分析用时:{:.4f}s".format(self.code.code, t_read_data, t_analyze))
         if self.show_result:
-            obj = RelavitiyVisualize(figure_title=self.code.code + ' ' + TimeTool.time_to_str(self.last_time),
+            obj = RelativityVisualize(figure_title=self.code.code + ' ' + TimeTool.time_to_str(self.last_time),
                                      indicators_num=len(self.indicators),
                                      min_step=self.min_step)
             obj.draw_main(points_set=self.time_grav.get_all_points(), last_price=self.last_price)
@@ -310,7 +311,7 @@ class Relativity(StrategyBase):
         else:
             self.min_step = 0.01
 
-        self.time_grav = relavity_cy.TimeGravitation(high, low, min_step=self.min_step, max_level=RELAVITY_MAX_LEVEL)
+        self.time_grav = relativity_cy.TimeGravitation(high, low, min_step=self.min_step, max_level=RELATIVITY_MAX_LEVEL)
         score = self.time_grav.get_score()
         # t_analyze = time.perf_counter() - t
         # print("分析{}完成, 日期:{}, 得分:{}, 读取数据用时:{:.4f}s 分析用时:{:.4f}s".format(
@@ -336,7 +337,7 @@ class Relativity(StrategyBase):
         return tmp_peak_set
 
     def show(self, points_set, zcyl_list, cm_dist):
-        obj = RelavitiyVisualize(figure_title=self.code.code + ' ' + TimeTool.time_to_str(self.last_time),
+        obj = RelativityVisualize(figure_title=self.code.code + ' ' + TimeTool.time_to_str(self.last_time),
                                  indicators_num=1)
         obj.draw_main(points_set, self.last_price)
         obj.draw_zcyl(zcyl_list)
@@ -344,7 +345,7 @@ class Relativity(StrategyBase):
         obj.show()
 
 
-class RelavitiyVisualize(object):
+class RelativityVisualize(object):
     def __init__(self, figure_title=None, indicators_num=1, min_step=0.01):
         plt.figure(figsize=(12 + indicators_num * 3, 8 + indicators_num * 2))
         self.grid = plt.GridSpec(38 + indicators_num * 5, 36)
@@ -569,7 +570,7 @@ if __name__ == '__main__':
     from matplotlib.ticker import MultipleLocator, FixedLocator
 
     end_time = TimeTool.str_to_dt('2021-08-01 15:00:00')
-    start_time = end_time - datetime.timedelta(days=365+180)
+    start_time = end_time - datetime.timedelta(days=365 + 180)
     start_time = start_time.replace(hour=9, minute=0, second=0)
     test_code_list = ['002273', '002382', '601456', '002492', '001979', '002584', '999999', '399006', '399001']
     test_code_list1 = ['600519']

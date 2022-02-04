@@ -9,7 +9,7 @@ from VisionQuant.DataCenter.DataServer import DataServer
 from VisionQuant.utils import TimeTool
 from VisionQuant.utils.Params import Freq, OrderStatus, OrderLifeTime, OrderType
 import datetime
-from VisionQuant.Analysis.Relavity.relativity_old import Relativity
+from VisionQuant.Analysis.Relativity.relativity_old import Relativity
 from VisionQuant.Engine.AnalyzeEngine import AnalyzeEngine
 
 

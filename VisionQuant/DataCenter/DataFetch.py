@@ -1,20 +1,24 @@
-import gzip
 import json
 import time
-import zlib
-
 import numpy as np
 import requests
 import pandas as pd
 from path import Path
 from socket import timeout
+from retrying import retry
+from tqdm import tqdm
+
 from VisionQuant.DataCenter.VQTdx.TdxHqAPI import ResponseRecvFailed, SendRequestPkgFailed, ResponseHeaderRecvFailed
 from VisionQuant.utils import TimeTool, JsonTool
 from VisionQuant.DataCenter.VQTdx.TdxSocketClient import TdxStdHqSocketClient
 from VisionQuant.DataCenter.VQTdx.TdxReader import TdxStdReader
 from VisionQuant.utils.Params import Market, LOCAL_DIR, HDF5_COMPLIB, HDF5_COMP_LEVEL, EXCEPT_CODELIST, REMOTE_ADDR
 from VisionQuant.DataCenter.DataStore import anadata_store_market_transform, kdata_store_market_transform
-from retrying import retry
+from VisionQuant.utils.VQlog import logger
+
+
+class FetchDataFailed(Exception):
+    pass
 
 
 class DataSourceBase(object):
@@ -62,10 +66,10 @@ class DataSourceTdxLive(DataSourceBase):
                                                         freq=code.frequency,
                                                         count=800)
         except (ResponseRecvFailed, SendRequestPkgFailed, timeout, ResponseHeaderRecvFailed):
-            print("连接至服务器失败，重新尝试链接...")
+            logger.warning("连接至通达信服务器失败，重新尝试链接...")
             flg = socket_client.reconnect()
             if flg:
-                print("重新连接成功")
+                logger.info("重新连接至通达信服务器成功")
             raise ResponseRecvFailed
         else:
             if len(fetched_kdata) == 0:
@@ -89,8 +93,11 @@ class DataSourceTdxLive(DataSourceBase):
         try:
             data = socket_client.api.get_stocks_list(socket_client.socket, market)
         except (ResponseRecvFailed, SendRequestPkgFailed, timeout):
-            print("连接至服务器失败，重新尝试链接...")
+            logger.warning("连接至通达信服务器失败，重新尝试链接...")
             socket_client.init_socket()
+            flg = socket_client.reconnect()
+            if flg:
+                logger.info("重新连接至通达信服务器成功")
             raise ResponseRecvFailed
         else:
             data['flag'] = data['code'].apply(flitercode)
@@ -164,9 +171,9 @@ class LocalReaderAPI(object):
             return data_df
 
     @staticmethod
-    def get_relavity_score_data(reader, market=Market.Ashare):
+    def get_relativity_score_data(reader, market=Market.Ashare):
         try:
-            fname = 'relavity_analyze_result.h5'
+            fname = 'relativity_analyze_result.h5'
             datapath = reader.find_path_anaresult(fname)
             store = pd.HDFStore(datapath, mode='r', complib=HDF5_COMPLIB, complevel=HDF5_COMP_LEVEL)
         except OSError as e:
@@ -334,8 +341,8 @@ class DataSourceLocal(DataSourceBase):
         return data_df
 
     @staticmethod
-    def fetch_relavity_score_data(socket_client, market) -> pd.DataFrame:
-        res_df = socket_client.api.get_relavity_score_data(socket_client.socket, market=market)
+    def fetch_relativity_score_data(socket_client, market) -> pd.DataFrame:
+        res_df = socket_client.api.get_relativity_score_data(socket_client.socket, market=market)
         return res_df
 
     @staticmethod
@@ -403,11 +410,11 @@ class RequestGenerater(object):
         get_url = get_url + market_str
         return get_url
 
-    def generate_relavity_anadata_url(self, market):
+    def generate_relativity_anadata_url(self, market):
         if self.remote_addr is None:
             raise RuntimeError("没有init socket")
         market_str = anadata_store_market_transform(market)
-        get_url = self.remote_addr + '/anadata/relavity/?'
+        get_url = self.remote_addr + '/anadata/relativity/?'
         market_str = 'market=' + market_str
         get_url = get_url + market_str
         return get_url
@@ -473,8 +480,8 @@ class RemoteServerAPI(object):
             raise ValueError("VQapi返回msg 为 false")
 
     @staticmethod
-    def get_relavity_score_data(req_generater, market=Market.Ashare):
-        get_url = req_generater.generate_relavity_anadata_url(market=market)
+    def get_relativity_score_data(req_generater, market=Market.Ashare):
+        get_url = req_generater.generate_relativity_anadata_url(market=market)
         resp = requests.get(get_url).content
         data = json.loads(resp)
         if data['msg'] == 'success':
@@ -505,7 +512,7 @@ class RemoteServerAPI(object):
         if data['msg'] == 'success':
             return JsonTool.getdata_from_json(data['data'], orient='split',
                                               dtype={'代码': str, '流通股本': float,
-                                                                   '市盈率-动态': float, '市净率': float})
+                                                     '市盈率-动态': float, '市净率': float})
         else:
             raise ValueError("VQapi返回msg 为 false")
 
@@ -546,8 +553,8 @@ class DataSourceVQAPI(DataSourceBase):
         return data_df
 
     @staticmethod
-    def fetch_relavity_score_data(socket_client, market) -> pd.DataFrame:
-        res_df = socket_client.api.get_relavity_score_data(socket_client.socket, market=market)
+    def fetch_relativity_score_data(socket_client, market) -> pd.DataFrame:
+        res_df = socket_client.api.get_relativity_score_data(socket_client.socket, market=market)
         return res_df
 
     @staticmethod
@@ -559,6 +566,436 @@ class DataSourceVQAPI(DataSourceBase):
     def fetch_blocks_data(socket_client, market) -> dict:
         res_dict = socket_client.api.get_blocks_data(socket_client.socket, market=market)
         return res_dict
+
+
+class AshareBasicDataAPI:
+    @staticmethod
+    @retry(stop_max_attempt_number=3, wait_random_min=100,wait_random_max=2000)
+    def get_basic_finance_data() -> pd.DataFrame:
+        """
+        东方财富网-沪深京 A 股-实时行情
+        http://quote.eastmoney.com/center/gridlist.html#hs_a_board
+        :return: 实时行情
+        :rtype: pandas.DataFrame
+        """
+        url = "http://82.push2.eastmoney.com/api/qt/clist/get"
+        params = {
+            "pn": "1",
+            "pz": "5000",
+            "po": "1",
+            "np": "1",
+            "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+            "fltt": "2",
+            "invt": "2",
+            "fid": "f3",
+            "fs": "m:0 t:6,m:0 t:80,m:1 t:2,m:1 t:23,m:0 t:81 s:2048",
+            "fields": "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,f23,f24,f25,f22,f11,f62,f128,f136,f115,f152",
+            "_": "1623833739532",
+        }
+        r = requests.get(url, params=params)
+        data_json = r.json()
+        if not data_json["data"]["diff"]:
+            raise FetchDataFailed("东方财富API调用失败，A股basic_finance数据获取失败")
+        temp_df = pd.DataFrame(data_json["data"]["diff"])
+        temp_df.columns = [
+            "_",
+            "最新价",
+            "涨跌幅",
+            "涨跌额",
+            "成交量",
+            "成交额",
+            "振幅",
+            "换手率",
+            "市盈率-动态",
+            "量比",
+            "_",
+            "代码",
+            "_",
+            "名称",
+            "最高",
+            "最低",
+            "今开",
+            "昨收",
+            "_",
+            "_",
+            "_",
+            "市净率",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+        ]
+        temp_df["换手率"] = pd.to_numeric(temp_df["换手率"], errors="coerce")
+        temp_df["市盈率-动态"] = pd.to_numeric(temp_df["市盈率-动态"], errors="coerce")
+        temp_df["市净率"] = pd.to_numeric(temp_df["市净率"], errors="coerce")
+        temp_df['流通股本'] = temp_df['成交量'] * 10000 / temp_df['换手率']
+        res_df = temp_df[["代码", '流通股本', '市盈率-动态', "市净率"]]
+        return res_df
+
+    @staticmethod
+    @retry(stop_max_attempt_number=3)
+    def get_ashare_blocks_data() -> dict:
+        res = {'按行业分类': dict(), '按概念分类': dict()}
+        try:
+            gn_names = AshareBasicDataAPI.get_gn_names_em()
+            hy_names = AshareBasicDataAPI.get_hy_names_em()
+            res['按概念分类']['0沪深京A股'] = AshareBasicDataAPI.get_all_cons_em()
+        except Exception as e:
+            logger.error("{} {}".format(e.__class__, e))
+            raise FetchDataFailed("东方财富API调用失败，A股板块数据获取失败")
+        else:
+            try:
+                for name, code in tqdm(zip(gn_names['板块名称'], gn_names['板块代码'])):
+                    res['按概念分类'][name] = AshareBasicDataAPI.get_hy_cons_em(code)
+                    time.sleep(0.5)
+                time.sleep(0.5)
+                for name, code in tqdm(zip(hy_names['板块名称'], hy_names['板块代码'])):
+                    res['按行业分类'][name] = AshareBasicDataAPI.get_hy_cons_em(code)
+                    time.sleep(0.5)
+            except Exception as e:
+                logger.error("{} {}".format(e.__class__, e))
+                raise FetchDataFailed("东方财富API调用失败，A股板块数据获取失败")
+
+        return res
+
+    @staticmethod
+    @retry(stop_max_attempt_number=3, wait_random_min=1000, wait_random_max=2000)
+    def get_hy_names_em() -> pd.DataFrame:
+        """
+        东方财富网-沪深板块-行业板块-名称
+        http://quote.eastmoney.com/center/boardlist.html#industry_board
+        :return: 行业板块-名称
+        :rtype: pandas.DataFrame
+        """
+        url = "http://17.push2.eastmoney.com/api/qt/clist/get"
+        params = {
+            "pn": "1",
+            "pz": "2000",
+            "po": "1",
+            "np": "1",
+            "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+            "fltt": "2",
+            "invt": "2",
+            "fid": "f3",
+            "fs": "m:90 t:2 f:!50",
+            "fields": "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,f23,f24,f25,f26,f22,f33,f11,f62,f128,f136,f115,f152,f124,f107,f104,f105,f140,f141,f207,f208,f209,f222",
+            "_": "1626075887768",
+        }
+        r = requests.get(url, params=params)
+        data_json = r.json()
+        if not data_json["data"]["diff"]:
+            raise FetchDataFailed("东方财富API调用失败，A股行业列表获取失败")
+        temp_df = pd.DataFrame(data_json["data"]["diff"])
+        temp_df.columns = [
+            '-',
+            "最新价",
+            "涨跌幅",
+            "涨跌额",
+            "-",
+            "_",
+            "-",
+            "换手率",
+            "-",
+            "-",
+            "-",
+            "板块代码",
+            "-",
+            "板块名称",
+            "-",
+            "-",
+            "-",
+            "-",
+            "总市值",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+            "上涨家数",
+            "下跌家数",
+            "-",
+            "-",
+            "-",
+            "领涨股票",
+            "-",
+            "-",
+            "领涨股票-涨跌幅",
+            "-",
+            "-",
+            "-",
+            "-",
+            "-",
+        ]
+        temp_df = temp_df[["板块名称", "板块代码"]]
+        return temp_df
+
+    @staticmethod
+    @retry(stop_max_attempt_number=3, wait_random_min=1000, wait_random_max=2000)
+    def get_hy_cons_em(symbol: str = "BK0475") -> list:
+        """
+        东方财富网-沪深板块-行业板块-板块成份
+        https://data.eastmoney.com/bkzj/BK1027.html
+        :param symbol: 板块名称
+        :param code: 行业代码
+        :type symbol: str
+        :return: 板块成份
+        :rtype: pandas.DataFrame
+        """
+        stock_board_code = symbol
+        url = "http://29.push2.eastmoney.com/api/qt/clist/get"
+        params = {
+            "pn": "1",
+            "pz": "2000",
+            "po": "1",
+            "np": "1",
+            "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+            "fltt": "2",
+            "invt": "2",
+            "fid": "f3",
+            "fs": f"b:{stock_board_code} f:!50",
+            "fields": "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,f23,f24,f25,f22,f11,f62,f128,f136,f115,f152,f45",
+            "_": "1626081702127",
+        }
+        r = requests.get(url, params=params)
+        data_json = r.json()
+        if not data_json["data"]["diff"]:
+            raise FetchDataFailed("东方财富API调用失败，A股行业详细数据获取失败")
+        temp_df = pd.DataFrame(data_json["data"]["diff"])
+        temp_df.columns = [
+            "_",
+            "最新价",
+            "涨跌幅",
+            "涨跌额",
+            "成交量",
+            "成交额",
+            "振幅",
+            "换手率",
+            "市盈率-动态",
+            "_",
+            "_",
+            "代码",
+            "_",
+            "名称",
+            "最高",
+            "最低",
+            "今开",
+            "昨收",
+            "_",
+            "_",
+            "_",
+            "市净率",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+        ]
+        res_list = temp_df["代码"].to_list()
+        return res_list
+
+    @staticmethod
+    @retry(stop_max_attempt_number=3, wait_random_min=1000, wait_random_max=2000)
+    def get_gn_names_em() -> pd.DataFrame:
+        """
+        东方财富网-沪深板块-概念板块-名称
+        http://quote.eastmoney.com/center/boardlist.html#concept_board
+        :return: 概念板块-名称
+        :rtype: pandas.DataFrame
+        """
+        url = "http://79.push2.eastmoney.com/api/qt/clist/get"
+        params = {
+            "pn": "1",
+            "pz": "2000",
+            "po": "1",
+            "np": "1",
+            "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+            "fltt": "2",
+            "invt": "2",
+            "fid": "f3",
+            "fs": "m:90 t:3 f:!50",
+            "fields": "f2,f3,f4,f8,f12,f14,f15,f16,f17,f18,f20,f21,f24,f25,f22,f33,f11,f62,f128,f124,f107,f104,f105,f136",
+            "_": "1626075887768",
+        }
+        r = requests.get(url, params=params)
+        data_json = r.json()
+        if not data_json["data"]["diff"]:
+            raise FetchDataFailed("东方财富API调用失败，A股概念列表获取失败")
+        temp_df = pd.DataFrame(data_json["data"]["diff"])
+        temp_df.columns = [
+            "最新价",
+            "涨跌幅",
+            "涨跌额",
+            "换手率",
+            "_",
+            "板块代码",
+            "板块名称",
+            "_",
+            "_",
+            "_",
+            "_",
+            "总市值",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "上涨家数",
+            "下跌家数",
+            "_",
+            "_",
+            "领涨股票",
+            "_",
+            "_",
+            "领涨股票-涨跌幅",
+        ]
+        temp_df = temp_df[["板块名称", "板块代码", ]]
+        return temp_df
+
+    @staticmethod
+    @retry(stop_max_attempt_number=3, wait_random_min=1000, wait_random_max=2000)
+    def get_gn_cons_em(symbol: str = "BK0816") -> list:
+        """
+        东方财富-沪深板块-概念板块-板块成份
+        http://quote.eastmoney.com/center/boardlist.html#boards-BK06551
+        :param symbol: 板块代码
+        :type symbol: str
+        :return: 板块成份
+        :rtype: pandas.DataFrame
+        """
+        stock_board_code = symbol
+        url = "http://29.push2.eastmoney.com/api/qt/clist/get"
+        params = {
+            "pn": "1",
+            "pz": "2000",
+            "po": "1",
+            "np": "1",
+            "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+            "fltt": "2",
+            "invt": "2",
+            "fid": "f3",
+            "fs": f"b:{stock_board_code} f:!50",
+            "fields": "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,f23,f24,f25,f22,f11,f62,f128,f136,f115,f152,f45",
+            "_": "1626081702127",
+        }
+        r = requests.get(url, params=params)
+        data_json = r.json()
+        if not data_json["data"]["diff"]:
+            raise FetchDataFailed("东方财富API调用失败，A股概念详细数据获取失败")
+        temp_df = pd.DataFrame(data_json["data"]["diff"])
+        temp_df.columns = [
+            "_",
+            "最新价",
+            "涨跌幅",
+            "涨跌额",
+            "成交量",
+            "成交额",
+            "振幅",
+            "换手率",
+            "市盈率-动态",
+            "_",
+            "_",
+            "代码",
+            "_",
+            "名称",
+            "最高",
+            "最低",
+            "今开",
+            "昨收",
+            "_",
+            "_",
+            "_",
+            "市净率",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+        ]
+        res_list = temp_df["代码"].to_list()
+        return res_list
+
+    @staticmethod
+    @retry(stop_max_attempt_number=3, wait_random_min=1000, wait_random_max=2000)
+    def get_all_cons_em() -> list:
+        """
+        东方财富网-沪深京 A 股-实时行情
+        http://quote.eastmoney.com/center/gridlist.html#hs_a_board
+        :return: 实时行情
+        :rtype: pandas.DataFrame
+        """
+        url = "http://82.push2.eastmoney.com/api/qt/clist/get"
+        params = {
+            "pn": "1",
+            "pz": "5000",
+            "po": "1",
+            "np": "1",
+            "ut": "bd1d9ddb04089700cf9c27f6f7426281",
+            "fltt": "2",
+            "invt": "2",
+            "fid": "f3",
+            "fs": "m:0 t:6,m:0 t:80,m:1 t:2,m:1 t:23,m:0 t:81 s:2048",
+            "fields": "f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f20,f21,f23,f24,f25,f22,f11,f62,f128,f136,f115,f152",
+            "_": "1623833739532",
+        }
+        r = requests.get(url, params=params)
+        data_json = r.json()
+        if not data_json["data"]["diff"]:
+            raise FetchDataFailed("东方财富API调用失败，沪深京A股列表数据获取失败")
+        temp_df = pd.DataFrame(data_json["data"]["diff"])
+        temp_df.columns = [
+            "_",
+            "最新价",
+            "涨跌幅",
+            "涨跌额",
+            "成交量",
+            "成交额",
+            "振幅",
+            "换手率",
+            "市盈率-动态",
+            "量比",
+            "_",
+            "代码",
+            "_",
+            "名称",
+            "最高",
+            "最低",
+            "今开",
+            "昨收",
+            "_",
+            "_",
+            "_",
+            "市净率",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+            "_",
+        ]
+        res = temp_df["代码"].to_list()
+        return res
 
 
 def mergeKdata(kdata, period, new_period):

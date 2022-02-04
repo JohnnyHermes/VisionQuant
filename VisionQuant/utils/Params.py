@@ -17,6 +17,8 @@ REQUEST_HEAD_KDATA = 0X01
 REQUEST_HEAD_DATASERVER_SETTINGS = 0xaa
 REQUEST_HEAD_BASIC_FINANCE_DATA = 0x10
 
+LOG_DIR = CfgTool.get_cfg('Log', 'path')
+
 """
 Market Type 市场类型
 """

@@ -22,8 +22,8 @@ from VisionQuant.utils import TimeTool
 from VisionQuant.utils.Code import Code
 import datetime
 from VisionQuant.DataCenter.DataFetch import DataSource
-from VisionQuant.Analysis.Relavity.Relavity import Relativity
-from VisionQuant.Analysis.Relavity import relavity_cy
+from VisionQuant.Analysis.Relativity.Relativity import Relativity
+from VisionQuant.Analysis.Relativity import relativity_cy
 
 curdoc().theme = 'dark_minimal'
 
@@ -1221,7 +1221,7 @@ def draw_space_grav_dist():
     space_grav_ax_hbar = space_grav_ax.hbar(left=0, right='volume', y='price', height=height, color='#6666cc',
                                             source=grav_dist_source)
     space_grav_ax_line = space_grav_ax.line(x='cdf', y='price', source=grav_dist_source, color='#eeeeee')
-    avg_price = relavity_cy.get_avg_price(dist_data['price'], dist_data['volume'], 0.5)
+    avg_price = relativity_cy.get_avg_price(dist_data['price'], dist_data['volume'], 0.5)
     avg_cost_line = Span(location=avg_price, dimension='width', line_color='yellow', line_width=2)
     space_grav_ax.add_layout(avg_cost_line)
 
@@ -1232,7 +1232,7 @@ def update_space_grav_dist():
     space_grav_ax_line.data_source.data = dist_data
     space_grav_ax_hbar.data_source.data = dist_data
     space_grav_ax_hbar.glyph.height = ana_result.space_grav.step * 0.7
-    avg_price = relavity_cy.get_avg_price(dist_data['price'], dist_data['volume'], 0.5)
+    avg_price = relativity_cy.get_avg_price(dist_data['price'], dist_data['volume'], 0.5)
     avg_cost_line.location = avg_price
 
 
@@ -1248,7 +1248,7 @@ def update_space_grav_dist_normal(event):
         new_grav_dist = calc_space_grav_dist(tmp_end_index)
         space_grav_ax_hbar.data_source.data = new_grav_dist
         space_grav_ax_line.data_source.data = new_grav_dist
-        avg_cost_line.location = relavity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.5)
+        avg_cost_line.location = relativity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.5)
 
 
 def update_space_grav_dist_sum(attr, old, new):
@@ -1261,14 +1261,14 @@ def update_space_grav_dist_sum(attr, old, new):
             new_grav_dist = calc_space_grav_dist(end_index, start_index)
             space_grav_ax_hbar.data_source.data = new_grav_dist
             space_grav_ax_line.data_source.data = new_grav_dist
-            avg_cost_line.location = relavity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.5)
+            avg_cost_line.location = relativity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.5)
 
 
 def update_space_grave_dist_none():
     new_grav_dist = calc_space_grav_dist(ana_result.last_index)
     space_grav_ax_hbar.data_source.data = new_grav_dist
     space_grav_ax_line.data_source.data = new_grav_dist
-    avg_cost_line.location = relavity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.5)
+    avg_cost_line.location = relativity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.5)
 
 
 def space_grav_calc_mode_callback(attr, old, new):
@@ -1411,7 +1411,7 @@ start_time = end_time - datetime.timedelta(days=365 + 180)
 start_time = start_time.replace(hour=9, minute=0, second=0)
 test_code = '999999'
 code = Code(test_code, '5', start_time, end_time=end_time,
-            data_source={'local': DataSource.Local.VQapi, 'live': DataSource.Live.VQtdx})
+            data_source={'local': DataSource.Local.Default, 'live': DataSource.Live.VQtdx})
 
 get_analyze_data(code)
 
@@ -1449,5 +1449,5 @@ curdoc().title = "Analyze"
 #     curdoc().add_root(layout)
 #     curdoc().title = "Analyze"
 #     # show(layout, width=1920, height=1080)  # open a browser
-#     # chart_obj = RelavityChart(t_code)
+#     # chart_obj = RelativityChart(t_code)
 #     # chart_obj.get_chart()

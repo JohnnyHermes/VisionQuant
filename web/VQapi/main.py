@@ -20,6 +20,17 @@ app = FastAPI()
 #     minimum_size=102400
 # )
 
+print("正在预加载Ashare Analyze数据...")
+data_source = DataSource.Local.Default
+sk = data_source.sk_client().init_socket()
+ashare_relativity_score_resp = JsonTool.df_to_json(DataSource.Local.Default.fetch_relativity_score_data(
+    sk, market=Market.Ashare), orient='split')
+
+ashare_blocks_score_resp = JsonTool.df_to_json(DataSource.Local.Default.fetch_blocks_score_data(
+    sk, market=Market.Ashare), orient='split')
+print("预加载Ashare Analyze数据完成！")
+
+
 # 绑定路由和视图函数
 @app.get("/")
 async def index():
@@ -47,8 +58,7 @@ def fetch_kdata(code: str, freq: str, market: int, st: str, et: str):
 @app.get("/codelist/")
 def fetch_codelist(market: str):
     if market == 'Ashare':
-        sk = DataSource.Local.Default.sk_client().init_socket()
-        ashare_codelist = DataSource.Local.Default.fetch_codelist(sk, market=Market.Ashare)
+        ashare_codelist = data_source.fetch_codelist(sk, market=Market.Ashare)
         resp = JsonTool.df_to_json(ashare_codelist, orient='split')
         return {'msg': 'success', 'data': resp}
     else:
@@ -58,20 +68,19 @@ def fetch_codelist(market: str):
 @app.get("/blockdata/")
 def fetch_blocks_data(market: str):
     if market == 'Ashare':
-        sk = DataSource.Local.Default.sk_client().init_socket()
-        blocksdata = DataSource.Local.Default.fetch_blocks_data(sk, market=Market.Ashare)
+        blocksdata = data_source.fetch_blocks_data(sk, market=Market.Ashare)
         resp = json.dumps(blocksdata)
         return {'msg': 'success', 'data': resp}
     else:
         return {'msg': 'wrong_msg'}
 
 
-@app.get("/anadata/relavity/")
-def fetch_relavity_anadata(market: str):
+@app.get("/anadata/relativity/")
+def fetch_relativity_anadata(market: str):
     if market == 'Ashare':
-        sk = DataSource.Local.Default.sk_client().init_socket()
-        data = DataSource.Local.Default.fetch_relavity_score_data(sk, market=Market.Ashare)
-        resp = JsonTool.df_to_json(data, orient='split')
+        # data = data_source.fetch_relativity_score_data(sk, market=Market.Ashare)
+        # resp = JsonTool.df_to_json(data, orient='split')
+        resp = ashare_relativity_score_resp
         return {'msg': 'success', 'data': resp}
     else:
         return {'msg': 'wrong_msg'}
@@ -80,9 +89,9 @@ def fetch_relavity_anadata(market: str):
 @app.get("/anadata/blocksscore/")
 def fetch_blocks_score_data(market: str):
     if market == 'Ashare':
-        sk = DataSource.Local.Default.sk_client().init_socket()
-        data = DataSource.Local.Default.fetch_blocks_score_data(sk, market=Market.Ashare)
-        resp = JsonTool.df_to_json(data, orient='split')
+        # data = data_source.fetch_blocks_score_data(sk, market=Market.Ashare)
+        # resp = JsonTool.df_to_json(data, orient='split')
+        resp = ashare_blocks_score_resp
         return {'msg': 'success', 'data': resp}
     else:
         return {'msg': 'wrong_msg'}
@@ -91,8 +100,7 @@ def fetch_blocks_score_data(market: str):
 @app.get("/financedata/basic/")
 def fetch_basic_finance_data(market: str):
     if market == 'Ashare':
-        sk = DataSource.Local.Default.sk_client().init_socket()
-        data = DataSource.Local.Default.fetch_basic_finance_data(sk, market=Market.Ashare)
+        data = data_source.fetch_basic_finance_data(sk, market=Market.Ashare)
         resp = JsonTool.df_to_json(data, orient='split')
         return {'msg': 'success', 'data': resp}
     else:
