@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 import uvicorn
 import json
-from fastapi.middleware.gzip import GZipMiddleware
 
 from VisionQuant.utils.Code import Code
 from VisionQuant.utils import TimeTool, JsonTool
@@ -14,25 +13,22 @@ hq_client = HqClient()
 # 类似于 app = Flask(__name__)
 app = FastAPI()
 
-# 启用gzip压缩，会慢0.5秒左右
-app.add_middleware(
-    GZipMiddleware,
-    minimum_size=1024 * 1024 * 5  # 大于5MB
-)
-
 data_source = DataSource.Local.Default
 ashare_relativity_score_resp = None
 ashare_blocks_score_resp = None
 
-if ashare_blocks_score_resp or ashare_relativity_score_resp is None:
-    print("正在预加载Ashare Analyze数据...")
-    sk = data_source.sk_client().init_socket()
-    ashare_relativity_score_resp = JsonTool.df_to_json(DataSource.Local.Default.fetch_relativity_score_data(
-        sk, market=Market.Ashare), orient='split')
 
-    ashare_blocks_score_resp = JsonTool.df_to_json(DataSource.Local.Default.fetch_blocks_score_data(
-        sk, market=Market.Ashare), orient='split')
-    print("预加载Ashare Analyze数据完成！")
+def preload_analyzedata():
+    global ashare_blocks_score_resp, ashare_relativity_score_resp
+    if ashare_blocks_score_resp or ashare_relativity_score_resp is None:
+        print("正在预加载Ashare Analyze数据...")
+        sk = data_source.sk_client().init_socket()
+        ashare_relativity_score_resp = JsonTool.df_to_json(DataSource.Local.Default.fetch_relativity_score_data(
+            sk, market=Market.Ashare), orient='split')
+
+        ashare_blocks_score_resp = JsonTool.df_to_json(DataSource.Local.Default.fetch_blocks_score_data(
+            sk, market=Market.Ashare), orient='split')
+        print("预加载Ashare Analyze数据完成！")
 
 
 # 绑定路由和视图函数
@@ -114,4 +110,5 @@ def fetch_basic_finance_data(market: str):
 if __name__ == "__main__":
     # 启动服务，因为我们这个文件叫做 main.py，所以需要启动 main.py 里面的 app
     # 第一个参数 "main:app" 就表示这个含义，然后是 host 和 port 表示监听的 ip 和端口
+    preload_analyzedata()
     uvicorn.run("main:app", host="0.0.0.0", port=5555)
