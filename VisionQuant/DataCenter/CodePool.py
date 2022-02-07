@@ -1,6 +1,7 @@
 from VisionQuant.utils.Code import Code
 from VisionQuant.DataCenter.DataFetch import DataSource
-from VisionQuant.utils.Params import Market, DEFAULT_ASHARE_LOCAL_DATASOURCE, DEFAULT_ASHARE_LIVE_DATASOURCE
+from VisionQuant.utils.Params import Market, DEFAULT_ASHARE_LOCAL_DATASOURCE, DEFAULT_ASHARE_LIVE_DATASOURCE,\
+    DEFAULT_CODELIST_DATASOURCE, DEFAULT_BLOCKS_DATA_DATASOURCE
 from VisionQuant.utils.VQlog import logger
 from pandas.core.series import Series
 
@@ -12,6 +13,24 @@ elif DEFAULT_ASHARE_LOCAL_DATASOURCE == 'VQtdx':
     ashare_local_source = DataSource.Local.VQtdx
 else:
     ashare_local_source = DataSource.Local.Default
+
+if DEFAULT_CODELIST_DATASOURCE == 'Default':
+    default_codelist_source = DataSource.Local.Default
+elif DEFAULT_CODELIST_DATASOURCE == 'VQapi':
+    default_codelist_source = DataSource.Local.VQapi
+elif DEFAULT_CODELIST_DATASOURCE == 'VQtdx':
+    default_codelist_source = DataSource.Local.VQtdx
+else:
+    default_codelist_source = DataSource.Local.Default
+
+if DEFAULT_BLOCKS_DATA_DATASOURCE == 'Default':
+    default_blocks_data_source = DataSource.Local.Default
+elif DEFAULT_BLOCKS_DATA_DATASOURCE == 'VQapi':
+    default_blocks_data_source = DataSource.Local.VQapi
+elif DEFAULT_BLOCKS_DATA_DATASOURCE == 'VQtdx':
+    default_blocks_data_source = DataSource.Local.VQtdx
+else:
+    default_blocks_data_source = DataSource.Local.Default
 
 if DEFAULT_ASHARE_LIVE_DATASOURCE == 'VQtdx':
     ashare_live_source = DataSource.Live.VQtdx
@@ -39,7 +58,7 @@ class CodePool:
 
 class AshareCodePool(CodePool):
 
-    def __init__(self, codelist_data_source=DataSource.Local.Default, blocks_data_source=DataSource.Local.Default,
+    def __init__(self, codelist_data_source=default_codelist_source, blocks_data_source=default_blocks_data_source,
                  code_default_data_source=None):
         if code_default_data_source is None:
             code_default_data_source = DEFAULT_ASHARE_DATA_SOURCE

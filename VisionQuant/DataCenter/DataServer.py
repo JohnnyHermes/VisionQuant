@@ -171,9 +171,10 @@ class DataServer:
 
     def update_data(self, code):
         now_time = TimeTool.get_now_time(return_type='datetime')
-        if not isinstance(code.frequency, list) and len(self.data_dict[code.code].get_kdata(code.frequency).data) > 0 \
-                and code.end_time <= self.data_dict[code.code].get_kdata(code.frequency).get_last_time():
-            return self.data_dict[code.code]
+        if not isinstance(code.frequency, list) and len(self.data_dict[code.code].get_kdata(code.frequency).data) > 0:
+            delta_time = code.end_time - self.data_dict[code.code].get_kdata(code.frequency).get_last_time()
+            if delta_time < - 144 * 10 ** 8:  # 相差超过4个小时
+                return self.data_dict[code.code]
         if now_time - self.last_update_time > datetime.timedelta(seconds=120):
             if self.sk_client_mng.find(code.data_source_live):
                 self.sk_client_mng.close_socket(code.data_source_live)

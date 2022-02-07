@@ -17,9 +17,25 @@ import datetime
 from VisionQuant.DataCenter.DataFetch import DataSource
 from VisionQuant.Analysis.Relativity.Relativity import Relativity
 from VisionQuant.Analysis.Relativity import relativity_cy
+from VisionQuant.utils.Params import DEFAULT_ASHARE_LOCAL_DATASOURCE, DEFAULT_ASHARE_LIVE_DATASOURCE
+
+if DEFAULT_ASHARE_LOCAL_DATASOURCE == 'Default':
+    local_source = DataSource.Local.Default
+elif DEFAULT_ASHARE_LOCAL_DATASOURCE == 'VQapi':
+    local_source = DataSource.Local.VQapi
+elif DEFAULT_ASHARE_LOCAL_DATASOURCE == 'VQtdx':
+    local_source = DataSource.Local.VQtdx
+else:
+    local_source = DataSource.Local.Default
+
+if DEFAULT_ASHARE_LIVE_DATASOURCE == 'VQtdx':
+    live_source = DataSource.Live.VQtdx
+elif DEFAULT_ASHARE_LIVE_DATASOURCE == 'VQapi':
+    live_source = DataSource.Live.VQapi
+else:
+    live_source = DataSource.Live.VQtdx
 
 curdoc().theme = 'dark_minimal'
-
 MAIN_WEIGHT = 1700
 MAIN_HEIGHT = 750
 line_colorlist = [Set2_8[i] for i in (7, 2, 1, 0, 3, 4, 5)]
@@ -1317,7 +1333,7 @@ def update(from_auto_refresh=False):
     start_time = start_time.replace(hour=9, minute=0, second=0)
     try:
         code = Code(new_code, '5', start_time, end_time=end_time,
-                    data_source={'local': DataSource.Local.VQapi, 'live': DataSource.Live.VQtdx})
+                    data_source={'local': local_source, 'live': live_source})
     except Exception as e:
         print(e)
         message_show.text = "输入代码错误！"
@@ -1395,10 +1411,9 @@ def get_chart():
 end_time = TimeTool.get_now_time(return_type='datetime')
 start_time = TimeTool.get_start_time(end_time, days=365 + 180)
 code = Code('999999', '5', start_time, end_time=end_time,
-            data_source={'local': DataSource.Local.Default, 'live': DataSource.Live.VQtdx})
+            data_source={'local': local_source, 'live': live_source})
 
 get_analyze_data(code)
-
 create_main_ax()
 create_time_grav_ax()
 create_space_grav_ax()

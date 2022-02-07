@@ -498,9 +498,12 @@ class RemoteServerAPI(object):
         data = json.loads(resp)
         if data['msg'] == 'success':
             content = data['data']
-            return JsonTool.getdata_from_json(content, orient='split',
-                                              dtype={'category': str, 'time': str, 'name': str,
-                                                     'stk_count': int, 'score': int, 'rise_count': int})
+            res = JsonTool.getdata_from_json(content, orient='split',
+                                             dtype={'category': str, 'time': str, 'name': str,
+                                                    'stk_count': int, 'score': float, 'rise_count': float})
+            res['score'] = np.round(res['score'], 3)
+            res['rise_count'] = np.round(res['rise_count'], 3)
+            return res
         else:
             raise ValueError("VQapi返回msg 为 false")
 
@@ -570,7 +573,7 @@ class DataSourceVQAPI(DataSourceBase):
 
 class AshareBasicDataAPI:
     @staticmethod
-    @retry(stop_max_attempt_number=3, wait_random_min=100,wait_random_max=2000)
+    @retry(stop_max_attempt_number=3, wait_random_min=100, wait_random_max=2000)
     def get_basic_finance_data() -> pd.DataFrame:
         """
         东方财富网-沪深京 A 股-实时行情

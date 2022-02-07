@@ -15,20 +15,24 @@ hq_client = HqClient()
 app = FastAPI()
 
 # 启用gzip压缩，会慢0.5秒左右
-# app.add_middleware(
-#     GZipMiddleware,
-#     minimum_size=102400
-# )
+app.add_middleware(
+    GZipMiddleware,
+    minimum_size=1024 * 1024 * 5  # 大于5MB
+)
 
-print("正在预加载Ashare Analyze数据...")
 data_source = DataSource.Local.Default
-sk = data_source.sk_client().init_socket()
-ashare_relativity_score_resp = JsonTool.df_to_json(DataSource.Local.Default.fetch_relativity_score_data(
-    sk, market=Market.Ashare), orient='split')
+ashare_relativity_score_resp = None
+ashare_blocks_score_resp = None
 
-ashare_blocks_score_resp = JsonTool.df_to_json(DataSource.Local.Default.fetch_blocks_score_data(
-    sk, market=Market.Ashare), orient='split')
-print("预加载Ashare Analyze数据完成！")
+if ashare_blocks_score_resp or ashare_relativity_score_resp is None:
+    print("正在预加载Ashare Analyze数据...")
+    sk = data_source.sk_client().init_socket()
+    ashare_relativity_score_resp = JsonTool.df_to_json(DataSource.Local.Default.fetch_relativity_score_data(
+        sk, market=Market.Ashare), orient='split')
+
+    ashare_blocks_score_resp = JsonTool.df_to_json(DataSource.Local.Default.fetch_blocks_score_data(
+        sk, market=Market.Ashare), orient='split')
+    print("预加载Ashare Analyze数据完成！")
 
 
 # 绑定路由和视图函数

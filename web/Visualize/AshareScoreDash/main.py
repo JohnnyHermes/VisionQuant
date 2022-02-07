@@ -17,9 +17,6 @@ from bokeh.models.widgets import Panel, Tabs
 from bokeh.palettes import Spectral11, Set2_6, Bokeh6, Pastel1_9, Pastel2_8, Set2_8
 from bokeh.plotting import figure
 from bokeh import events
-from bokeh.layouts import gridplot
-from bokeh.plotting import show
-from tqdm import tqdm
 import bokeh
 
 from VisionQuant.DataCenter.CodePool import AshareCodePool
@@ -28,12 +25,11 @@ from VisionQuant.utils.Code import Code
 import datetime
 from VisionQuant.DataCenter.DataFetch import DataSource
 from VisionQuant.Analysis.Relativity.Relativity import Relativity
-from VisionQuant.Analysis.Relativity import relativity_cy
 from VisionQuant.utils.Params import Market
 
 curdoc().theme = 'dark_minimal'
 max_level = 7
-data_source = DataSource.Local.Default
+analyze_data_source = DataSource.Local.VQapi
 
 score_ax: bokeh.plotting.Figure = None
 score_ax_df: pd.DataFrame
@@ -329,14 +325,14 @@ def draw_main_ax():
 
 
 def get_relativity_score_data(market=Market.Ashare):
-    sk = data_source.sk_client().init_socket()
-    res_data = data_source.fetch_relativity_score_data(sk, market=market)
+    sk = analyze_data_source.sk_client().init_socket()
+    res_data = analyze_data_source.fetch_relativity_score_data(sk, market=market)
     return res_data
 
 
 def get_blocks_score_data(market=Market.Ashare):
-    sk = data_source.sk_client().init_socket()
-    res_data = data_source.fetch_blocks_score_data(sk, market=market)
+    sk = analyze_data_source.sk_client().init_socket()
+    res_data = analyze_data_source.fetch_blocks_score_data(sk, market=market)
     return res_data
 
 
