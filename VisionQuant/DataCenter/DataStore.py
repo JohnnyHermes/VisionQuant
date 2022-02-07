@@ -44,7 +44,7 @@ def store_kdata_to_hdf5(datastruct):
         for freq in datastruct.get_freqs():
             kdata = datastruct.get_kdata(freq)
             if len(kdata) > 0:
-                store.put(key='_' + freq, value=kdata.data_struct)
+                store.put(key='_' + freq, value=kdata.data)
         store.close()
 
 

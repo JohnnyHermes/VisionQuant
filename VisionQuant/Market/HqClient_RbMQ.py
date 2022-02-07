@@ -31,4 +31,4 @@ if __name__ == '__main__':
     import time
 
     data = Hq_rpc.get_kdata(code)  # 约0.1s
-    print(data.get_kdata('5').fliter(key='index', start=-10, end=-1).data_struct)
+    print(data.get_kdata('5').fliter(key='index', start=-10, end=-1).data)
