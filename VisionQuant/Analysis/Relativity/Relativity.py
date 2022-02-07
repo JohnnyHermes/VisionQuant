@@ -569,17 +569,18 @@ if __name__ == '__main__':
     import gc, time
     from matplotlib.ticker import MultipleLocator, FixedLocator
 
-    end_time = TimeTool.str_to_dt('2021-08-01 15:00:00')
+    end_time = TimeTool.str_to_dt('2022-02-05 15:00:00')
     start_time = end_time - datetime.timedelta(days=365 + 180)
     start_time = start_time.replace(hour=9, minute=0, second=0)
     test_code_list = ['002273', '002382', '601456', '002492', '001979', '002584', '999999', '399006', '399001']
-    test_code_list1 = ['600519']
+    test_code_list1 = ['601333']
     for test_code in test_code_list1:
         t_code = Code(test_code, '5', start_time, end_time=end_time,
-                      data_source={'local': DataSource.Local.VQapi, 'live': DataSource.Live.VQapi})
-        test_strategy = Relativity(code=t_code, show_result=True)
-        test_score = test_strategy.analyze_score()
-        print('{} {}'.format(test_code, test_score))
+                      data_source={'local': DataSource.Local.Default, 'live': DataSource.Live.VQtdx})
+        test_strategy = Relativity(code=t_code, show_result=False)
+        test_strategy.analyze()
+        # test_score = test_strategy.analyze_score()
+        # print('{} {}'.format(test_code, test_score))
         # time.sleep(8)
         # plt.clf()
         gc.collect()

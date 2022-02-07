@@ -7,7 +7,7 @@ from bokeh.document import Document
 from bokeh.layouts import gridplot, column, row
 from bokeh.models import ColumnDataSource, CustomJS, DataRange1d, BoxSelectTool, Div, RadioButtonGroup, TableColumn, \
     DataTable, Span, Button, Label, CompositeTicker, Select, TextInput, NumeralTickFormatter, WheelZoomTool, ResetTool, \
-    PanTool, CheckboxGroup, Paragraph, PolyDrawTool, PolyEditTool, Title, DatePicker, RadioGroup, LogAxis
+    PanTool, CheckboxGroup, Paragraph, PolyDrawTool, PolyEditTool, Title, DatePicker, RadioGroup, LogAxis, BoxAnnotation
 from bokeh.themes import built_in_themes
 from bokeh.io import curdoc
 from bokeh.models import HoverTool, CrosshairTool
@@ -36,6 +36,7 @@ max_level = 7
 data_source = DataSource.Local.Default
 
 score_ax: bokeh.plotting.Figure = None
+score_ax_df: pd.DataFrame
 show_data_class = 'score'
 
 #  main ax parameters
@@ -372,6 +373,7 @@ def date_change_callback(attr, old, new):
 
 
 def blocks_datasource_selected_change_callback(attr, old, new):
+    global score_ax_df
     select_block_name = blocks_datasource.data['name'][new[0]]
     select_block_category = blocks_datasource.data['category'][new[0]]
     select_block_time = blocks_datasource.data['time'][new[0]]
@@ -379,16 +381,27 @@ def blocks_datasource_selected_change_callback(attr, old, new):
     tmp_data_df = df_select(source_data, 'time', select_block_time, sortkey=['score', 'rise_count'])
     new_data_df = tmp_data_df[tmp_data_df['code'].apply(lambda x: x in block_code_list)]
     datasource.data = new_data_df
-    update_score_ax(select_block_name, get_score_ax_ds(df_select(blocks_source_data, 'name', select_block_name)))
+    score_ax_df = df_select(blocks_source_data, 'name', select_block_name)
+    update_score_ax(get_score_ax_ds(score_ax_df, show_key=show_data_class), select_block_name)
 
 
 def datasource_selected_change_callback(attr, old, new):
-    global code, all_code_dict
+    global code, all_code_dict, score_ax_df
     select_name = datasource.data['name'][new[0]]
     select_code = datasource.data['code'][new[0]]
+    select_time = datasource.data['time'][new[0]]
     code = all_code_dict[select_code]
+    blocks_name_list = []
+    for _, data in blocks_data.items():
+        for name, code_list in data.items():
+            if code.code in code_list:
+                blocks_name_list.append(name)
+    tmp_blocks_data_df = df_select(blocks_source_data, 'time', select_time, sortkey=['score', 'rise_count'])
+    new_blocks_data_df = tmp_blocks_data_df[tmp_blocks_data_df['name'].apply(lambda x: x in blocks_name_list)]
+    blocks_datasource.data = new_blocks_data_df
+    score_ax_df = df_select(source_data, 'code', select_code)
+    update_score_ax(get_score_ax_ds(score_ax_df, show_key=show_data_class), select_name)
     get_analyze_data(code)
-    update_score_ax(select_name, get_score_ax_ds(df_select(source_data, 'code', select_code)))
     create_main_ax()
     draw_main_ax()
     layout.children[1].children[1] = main_ax
@@ -403,6 +416,15 @@ def block_category_select_callback(value):
         blocks_datasource.data = tmp_data_df
     else:
         blocks_datasource.data = tmp_data_df
+
+
+def show_class_select_callback(value):
+    global show_data_class
+    if value == 0:
+        show_data_class = 'score'
+    else:
+        show_data_class = 'rise_count'
+    update_score_ax(get_score_ax_ds(score_ax_df, show_key=show_data_class), data_class=show_data_class)
 
 
 def create_score_ax():
@@ -426,9 +448,11 @@ def create_score_ax():
     score_ax.yaxis.major_label_standoff = 0
     score_ax.min_border_right = 50
     score_ax.yaxis.formatter = NumeralTickFormatter(format='0.00')
-    for val in (0, 2, 4, 8, 16, 32, 64, 128):
+    for val in (1, 3, 7, 15, 31, 63, 127):
         score_ax.add_layout(Span(location=val, dimension='width',
                                  line_color='#ffffcc', line_width=1, line_dash="dashed"))
+    for low, high in zip((12, 24, 48, 86), (15, 31, 63, 127)):
+        score_ax.add_layout(BoxAnnotation(bottom=low, top=high, fill_alpha=0.2, fill_color='red'))
     score_ax_ds_change_callback = CustomJS(args={'y_range': score_ax.y_range, 'x_range': score_ax.x_range},
                                            code="""
                                   clearTimeout(window._autoscale_timeout_score_ax_ds);
@@ -550,22 +574,33 @@ def get_score_ax_ds(df_data, show_key='score'):
     res_data['index'] = list(range(len(df_data)))
     res_data['time'] = df_data['time'].to_list()
     res_data['value'] = df_data[show_key].to_list()
+    res_data['mean_value'] = df_data[show_key].rolling(window=10, min_periods=1).mean()
     return res_data
 
 
 def draw_score_ax():
-    score_ax.title = Title(text="{} {}".format('沪深京A股', show_data_class))
+    score_ax.title = Title(text="{} {}".format('沪深京A股', '得分' if show_data_class == 'score' else '上升级别数'))
     end_index = score_ax_ds.data['index'][len(score_ax_ds.data['index']) - 1]
     score_ax.x_range.bounds = (0, end_index)
     score_ax.x_range.start = end_index - 40
     score_ax.x_range.end = end_index
-    score_ax.line(x='index', y='value', source=score_ax_ds, line_width=2)
+    score_ax.line(x='index', y='value', source=score_ax_ds, line_width=2, line_color='white')
+    score_ax.line(x='index', y='mean_value', source=score_ax_ds, line_width=2, line_color='yellow')
     xaxis_label_dict = dict(zip(score_ax_ds.data['index'], score_ax_ds.data['time']))
     score_ax.xaxis.major_label_overrides = xaxis_label_dict
 
 
-def update_score_ax(name, new_data):
-    score_ax.title.text = "{} {}".format(name, show_data_class)
+def update_score_ax(new_data, name=None, data_class=None):
+    if name is not None and data_class is None:
+        score_ax.title.text = "{} {}".format(name, '得分' if show_data_class == 'score' else '上升级别数')
+    elif name is None and data_class is not None:
+        tmp_str_list = score_ax.title.text.split(' ')
+        new_str = ' '.join([tmp_str_list[0], '得分' if show_data_class == 'score' else '上升级别数'])
+        score_ax.title.text = new_str
+    elif name is not None and data_class is not None:
+        score_ax.title.text = "{} {}".format(name, data_class)
+    else:
+        pass
     score_ax_ds.data = new_data
 
 
@@ -580,7 +615,8 @@ last_time = np.max(source_data['time'])
 
 datasource = ColumnDataSource(df_select(source_data, 'time', last_time, sortkey=['score', 'rise_count']))
 datasource.selected.on_change('indices', datasource_selected_change_callback)
-score_ax_ds = ColumnDataSource(get_score_ax_ds(df_select(blocks_source_data, 'name', '0沪深京A股')))
+score_ax_df = df_select(blocks_source_data, 'name', '0沪深京A股')
+score_ax_ds = ColumnDataSource(get_score_ax_ds(score_ax_df, show_key=show_data_class))
 
 blocks_datasource = ColumnDataSource(df_select(blocks_source_data, 'time', last_time, sortkey='score'))
 blocks_datasource.selected.on_change('indices', blocks_datasource_selected_change_callback)
@@ -588,7 +624,7 @@ blocks_datasource.selected.on_change('indices', blocks_datasource_selected_chang
 end_time = TimeTool.get_now_time(return_type='datetime')
 start_time = end_time - datetime.timedelta(days=365 + 180)
 start_time = start_time.replace(hour=9, minute=0, second=0)
-all_code_dict = code_pool.get_all_code(start_time=start_time,end_time=end_time)
+all_code_dict = code_pool.get_all_code(start_time=start_time, end_time=end_time)
 code = all_code_dict['999999']
 get_analyze_data(code)
 create_main_ax()
@@ -598,9 +634,6 @@ enable_dates = [(d, d) for d in set(source_data['time'])]
 date_picker_model = DatePicker(value=last_time, min_date=np.min(source_data['time']), max_date=last_time, width=230,
                                enabled_dates=enable_dates)
 date_picker_text = Paragraph(text="日期选择器", disable_math=True, align='center')
-date_picker_model.js_on_change("value", CustomJS(code="""
-    console.log('date_picker: value=' + this.value, this.toString())
-"""))
 date_picker_model.on_change('value', date_change_callback)
 date_picker = row(date_picker_text, date_picker_model)
 
@@ -610,6 +643,11 @@ block_category_select_text = Paragraph(text="板块分类选择", disable_math=T
 block_category_select_model = RadioGroup(labels=block_category_select_labels, active=0, inline=True, max_width=250)
 block_category_select_model.on_click(block_category_select_callback)
 block_category_select = row(block_category_select_text, block_category_select_model)
+
+score_ax_show_class_select_text = Paragraph(text="数据展示类别", disable_math=True, align='center')
+score_ax_show_class_select_model = RadioGroup(labels=['得分', '上升类别数'], active=0, inline=True, max_width=250)
+score_ax_show_class_select_model.on_click(show_class_select_callback)
+score_ax_show_class_select = row(score_ax_show_class_select_text, score_ax_show_class_select_model)
 
 columns_blocks = [
     TableColumn(field="time", title="日期"),
@@ -635,10 +673,12 @@ columns = [
 ]
 
 data_table = DataTable(source=datasource, columns=columns, width=900)
-blocks_data_table = DataTable(source=blocks_datasource, columns=columns_blocks, width=600)
+blocks_data_table = DataTable(source=blocks_datasource, columns=columns_blocks, width=600, scroll_to_selection=False)
 create_score_ax()
 draw_score_ax()
-layout = column(row(blocks_data_table, data_table, column(date_picker, block_category_select)),
+layout = column(row(blocks_data_table, data_table, column(date_picker,
+                                                          block_category_select,
+                                                          score_ax_show_class_select)),
                 row(score_ax, main_ax))
 curdoc().add_root(layout)
 # curdoc().on_session_destroyed(cleanup_session)

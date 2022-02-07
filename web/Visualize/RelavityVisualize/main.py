@@ -1,22 +1,15 @@
 import bokeh.plotting
 import numpy as np
-from bokeh.document import Document
 
 from bokeh.layouts import gridplot, column, row
-from bokeh.models import ColumnDataSource, CustomJS, DataRange1d, BoxSelectTool, Div, RadioButtonGroup, TableColumn, \
-    DataTable, Span, Button, Label, CompositeTicker, Select, TextInput, NumeralTickFormatter, WheelZoomTool, ResetTool, \
-    PanTool, CheckboxGroup, Paragraph, PolyDrawTool, PolyEditTool, Title
-from bokeh.themes import built_in_themes
+from bokeh.models import ColumnDataSource, CustomJS, DataRange1d, BoxSelectTool, RadioButtonGroup, \
+    Span, Button, Label, Select, TextInput, NumeralTickFormatter, WheelZoomTool, ResetTool, \
+    PanTool, CheckboxGroup, Paragraph, PolyDrawTool, Title
 from bokeh.io import curdoc
-from bokeh.models import HoverTool, CrosshairTool
-from bokeh.models.widgets import Panel, Tabs
-# 导入颜色模块
-# 在notebook中创建绘图空间
-from bokeh.palettes import Spectral11, Set2_6, Bokeh6, Pastel1_9, Pastel2_8, Set2_8
+from bokeh.models import CrosshairTool
+from bokeh.palettes import Set2_8
 from bokeh.plotting import figure
 from bokeh import events
-from bokeh.layouts import gridplot
-from bokeh.plotting import show
 
 from VisionQuant.utils import TimeTool
 from VisionQuant.utils.Code import Code
@@ -33,38 +26,38 @@ line_colorlist = [Set2_8[i] for i in (7, 2, 1, 0, 3, 4, 5)]
 default_indicator_name = '均线离散度'
 time_count = 0
 auto_fresh_period = 15  # 单位：秒
+period_callback_id = None
 
-code = None
-ana_result: Relativity = None
+code: Code
+ana_result: Relativity
 decimal_num = 2
 
 #  main ax parameters
-main_ax: bokeh.plotting.Figure = None
+main_ax: bokeh.plotting.Figure
 main_ax_line_source_dict = dict()
 main_ax_line_dict = dict()
-base_points: bokeh.models.GlyphRenderer = None
+base_points: bokeh.models.GlyphRenderer
 main_ax_peak_pricelabel_list = []
 main_ax_peak_span_list = []
 main_ax_last_price_line = None
-main_ax_last_price_label: bokeh.models.Label = None
+main_ax_last_price_label: bokeh.models.Label
 main_ax_trend_source = None
 
 #  space_grav ax parameters
-space_grav_ax: bokeh.plotting.Figure = None
-space_grav_ax_hbar: bokeh.models.GlyphRenderer = None
-space_grav_ax_line: bokeh.models.GlyphRenderer = None
+space_grav_ax: bokeh.plotting.Figure
+space_grav_ax_hbar: bokeh.models.GlyphRenderer
+space_grav_ax_line: bokeh.models.GlyphRenderer
 avg_cost_line = None
 
 #  time_grav ax parameters
-time_grav_ax: bokeh.plotting.Figure = None
-time_grav_dist_source: bokeh.models.sources.ColumnDataSource = None
+time_grav_ax: bokeh.plotting.Figure
+time_grav_dist_source: bokeh.models.sources.ColumnDataSource
 time_grav_ax_glyphs = []
 
 tool_ax = None
 layout: bokeh.models.layouts.LayoutDOM = None
 
 update_space_grav_dist_callback = None
-period_callback_id = None
 update_func_lock = 0
 
 # 价格label
@@ -75,7 +68,7 @@ pricelabel = Label(x=0, y=0, x_units='data',
                    x_offset=0, text_font_size='11pt', visible=False)
 
 # tool: indicator选框
-indicator_select: bokeh.models.widgets.Select = None
+indicator_select: bokeh.models.widgets.Select
 
 # tool: 筹码计算模式选择
 space_grav_calc_mode = RadioButtonGroup(labels=['无', '正常', '累加'], active=0, height=30, width=190)
@@ -1193,7 +1186,8 @@ def create_space_grav_ax():
                            toolbar_location=None,
                            x_range=DataRange1d(bounds=(0, 1.02),
                                                start=0, end=1.02),
-                           y_range=main_ax.y_range
+                           y_range=main_ax.y_range,
+                           active_drag=None
                            )
     space_grav_ax.yaxis.major_label_text_alpha = 0
     space_grav_ax.margin = (0, 0, 0, 0)  # top、right、bottom、left margin
@@ -1398,19 +1392,9 @@ def get_chart():
     layout = gridplot([[main_ax, space_grav_ax], [time_grav_ax, tool_ax]], merge_tools=False)
 
 
-def cleanup_session(session_context):
-    global time_count, period_callback_id
-    # This function executes when the user closes the session.
-    time_count = 0
-    if period_callback_id is not None:
-        curdoc().remove_periodic_callback(period_callback_id)
-
-
 end_time = TimeTool.get_now_time(return_type='datetime')
-start_time = end_time - datetime.timedelta(days=365 + 180)
-start_time = start_time.replace(hour=9, minute=0, second=0)
-test_code = '999999'
-code = Code(test_code, '5', start_time, end_time=end_time,
+start_time = TimeTool.get_start_time(end_time, days=365 + 180)
+code = Code('999999', '5', start_time, end_time=end_time,
             data_source={'local': DataSource.Local.Default, 'live': DataSource.Live.VQtdx})
 
 get_analyze_data(code)

@@ -106,7 +106,8 @@ class AshareDataUpdate(DataUpdateBase):
         else:
             code_list = self.code_pool.get_all_code(return_type=list)
         error_code_list = []
-        for code in tqdm(code_list):
+        code_list = tqdm(code_list)
+        for code in code_list:
             code_list.set_description("Updating {} {}".format(code.code, today_date))
             try:
                 update_single_stock(code)
@@ -208,7 +209,7 @@ class AshareDataUpdate(DataUpdateBase):
             for d in self.analyze_date:
                 res = analyze_single_date(d)
                 store_blocks_score_data_to_hdf5(res, market=Market.Ashare)
-                logger.info("更新 {} A股blocks_score数据成功!".format(d))
+                logger.success("更新 {} A股blocks_score数据成功!".format(d))
 
     @staticmethod
     def _update_blocks_data():
@@ -216,7 +217,7 @@ class AshareDataUpdate(DataUpdateBase):
         try:
             res_dict = AshareBasicDataAPI.get_ashare_blocks_data()
         except FetchDataFailed:
-            logger.error("获取A股板块数据失败! 详细信息见DataFetch.log")
+            logger.error("获取A股板块数据失败! 详细信息见日志文件")
         else:
             try:
                 store_blocks_data(res_dict, Market.Ashare)
@@ -230,7 +231,7 @@ class AshareDataUpdate(DataUpdateBase):
         try:
             self.code_pool.get_code_df()
         except RuntimeError:
-            logger.error("获取A股股票列表数据失败! 详细信息见CodePool.log")
+            logger.error("获取A股股票列表数据失败! 详细信息见日志文件")
         else:
             try:
                 store_code_list_stock(self.code_pool.code_df, Market.Ashare)
@@ -245,7 +246,7 @@ class AshareDataUpdate(DataUpdateBase):
         try:
             res_df = AshareBasicDataAPI.get_basic_finance_data()
         except FetchDataFailed:
-            logger.error("获取A股basic_finance数据失败! 详细信息见DataFetch.log")
+            logger.error("获取A股basic_finance数据失败! 详细信息见日志文件")
         else:
             try:
                 store_basic_finance_data(res_df, Market.Ashare)

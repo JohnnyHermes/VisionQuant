@@ -42,6 +42,9 @@ class Market(object):
             BOND = 9
             OTHERS = 10
 
+        class MarketBJ(object):
+            stock = 11
+
     @staticmethod
     def is_ashare(market):
         if market in [Market.Ashare, Market.Ashare.MarketSH, Market.Ashare.MarketSZ, Market.Ashare.MarketSZ.STOCK,
