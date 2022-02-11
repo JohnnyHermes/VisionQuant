@@ -91,6 +91,7 @@ def create_main_ax():
     main_ax.yaxis.minor_tick_line_color = 'white'
     main_ax.yaxis.major_tick_line_color = 'white'
     main_ax.yaxis.formatter = NumeralTickFormatter()
+    main_ax.ygrid.visible = False
 
     main_ax.add_layout(pricelabel)
     MouseMoveCallback = CustomJS(args={'label': pricelabel, 'x_range': main_ax.x_range, 'y_range': main_ax.y_range,
@@ -444,9 +445,12 @@ def create_score_ax():
     score_ax.yaxis.major_label_standoff = 0
     score_ax.min_border_right = 50
     score_ax.yaxis.formatter = NumeralTickFormatter(format='0.00')
-    for val in (1, 3, 7, 15, 31, 63, 127):
-        score_ax.add_layout(Span(location=val, dimension='width',
-                                 line_color='#ffffcc', line_width=1, line_dash="dashed"))
+    score_ax.ygrid.ticker = [0, 1, 3, 15, 31, 63, 127]
+    score_ax.ygrid.grid_line_width = 2
+    score_ax.ygrid.grid_line_color = '#ffffcc'
+    # for val in (1, 3, 7, 15, 31, 63, 127):
+    #     score_ax.add_layout(Span(location=val, dimension='width',
+    #                              line_color='#ffffcc', line_width=1, line_dash="dashed"))
     for low, high in zip((12, 24, 48, 86), (15, 31, 63, 127)):
         score_ax.add_layout(BoxAnnotation(bottom=low, top=high, fill_alpha=0.2, fill_color='red'))
     score_ax_ds_change_callback = CustomJS(args={'y_range': score_ax.y_range, 'x_range': score_ax.x_range},
@@ -498,12 +502,14 @@ def create_score_ax():
                                         min_price = price;
                                     }
                                 });
-                                var pad_price = (max_price - min_price) * 0.05;
-                                window._autoscale_timeout_score_ax_ds = setTimeout(function() {
-                                    y_range.start = Math.max(min_price - pad_price,0);
-                                    y_range.end = max_price + pad_price;
-                                },100);
-                                console.log(y_range.start,y_range.end);
+                                if ((min_price != Infinity) && (max_price != -Infinity) && (min_price != max_price)){
+                                    console.log(min_price,max_price);
+                                    var pad_price = (max_price - min_price) * 0.05;
+                                    window._autoscale_timeout_score_ax_ds = setTimeout(function() {
+                                        y_range.start = Math.max(min_price - pad_price,0);
+                                        y_range.end = max_price + pad_price;
+                                    },100);
+                                }
                                   """)
     score_ax_ds.js_on_change('data', score_ax_ds_change_callback)
     score_ax_autozoom_callback_start = CustomJS(
@@ -522,6 +528,9 @@ def create_score_ax():
                 start_i = 0,
                 end_i = 0,
                 i = 0;
+            if (index.length <= 1){
+                return;
+            }
             while (low < high && mid != high){
                 if (index[mid] < start){
                     low = mid;
@@ -556,11 +565,14 @@ def create_score_ax():
                     min_price = price;
                 }
             });
-            var pad_price = (max_price - min_price) * 0.05;
-            window._autoscale_timeout = setTimeout(function() {
-                y_range.start = Math.max(min_price - pad_price, 0);
-                y_range.end = max_price + pad_price;
-            });
+            if ((min_price != Infinity) && (max_price != -Infinity) && (min_price != max_price)){
+                console.log(min_price,max_price);
+                var pad_price = (max_price - min_price) * 0.05;
+                window._autoscale_timeout = setTimeout(function() {
+                    y_range.start = Math.max(min_price - pad_price, 0);
+                    y_range.end = max_price + pad_price;
+                });
+            }
             ''')
     score_ax.x_range.js_on_change('start', score_ax_autozoom_callback_start)
 
@@ -577,8 +589,17 @@ def get_score_ax_ds(df_data, show_key='score'):
 def draw_score_ax():
     score_ax.title = Title(text="{} {}".format('沪深京A股', '得分' if show_data_class == 'score' else '上升级别数'))
     end_index = score_ax_ds.data['index'][len(score_ax_ds.data['index']) - 1]
-    score_ax.x_range.bounds = (0, end_index)
-    score_ax.x_range.start = end_index - 40
+    if end_index == 0:
+        score_ax.x_range.bounds = (0, 1)
+        score_ax.x_range.start = 0
+        score_ax.x_range.end = 1
+    else:
+        score_ax.x_range.bounds = (0, end_index)
+        if len(score_ax_ds.data['index']) > 40:
+            score_ax.x_range.start = end_index - 40
+        else:
+            score_ax.x_range.start = end_index - len(score_ax_ds.data['index']) + 1
+        score_ax.x_range.end = end_index
     score_ax.x_range.end = end_index
     score_ax.line(x='index', y='value', source=score_ax_ds, line_width=2, line_color='white')
     score_ax.line(x='index', y='mean_value', source=score_ax_ds, line_width=2, line_color='yellow')
@@ -598,6 +619,20 @@ def update_score_ax(new_data, name=None, data_class=None):
     else:
         pass
     score_ax_ds.data = new_data
+    end_index = score_ax_ds.data['index'][len(score_ax_ds.data['index']) - 1]
+    if end_index == 0:
+        score_ax.x_range.bounds = (0, 1)
+        score_ax.x_range.start = 0
+        score_ax.x_range.end = 1
+    else:
+        score_ax.x_range.bounds = (0, end_index)
+        if len(score_ax_ds.data['index']) > 40:
+            score_ax.x_range.start = end_index - 40
+        else:
+            score_ax.x_range.start = end_index - len(score_ax_ds.data['index']) + 1
+        score_ax.x_range.end = end_index
+    xaxis_label_dict = dict(zip(score_ax_ds.data['index'], score_ax_ds.data['time']))
+    score_ax.xaxis.major_label_overrides = xaxis_label_dict
 
 
 source_data = get_relativity_score_data()

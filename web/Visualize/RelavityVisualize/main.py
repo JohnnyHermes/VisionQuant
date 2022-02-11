@@ -118,11 +118,15 @@ def get_analyze_data(_code):
     global ana_result, decimal_num
     strategy_obj = Relativity(code=_code, show_result=False)
     strategy_obj.analyze()
-    ana_result = strategy_obj
-    if ana_result.min_step - 0.001 < 1e-6:
-        decimal_num = 3
+    if strategy_obj.analyze_flag:
+        ana_result = strategy_obj
+        if ana_result.min_step - 0.001 < 1e-6:
+            decimal_num = 3
+        else:
+            decimal_num = 2
+        return 1
     else:
-        decimal_num = 2
+        return 0
 
 
 def create_main_ax():
@@ -145,6 +149,7 @@ def create_main_ax():
     main_ax.yaxis.minor_tick_line_color = 'white'
     main_ax.yaxis.major_tick_line_color = 'white'
     main_ax.yaxis.formatter = NumeralTickFormatter()
+    main_ax.ygrid.visible = False
 
     main_ax.add_layout(pricelabel)
     multi_line = main_ax.multi_line('xs', 'ys', source=multi_line_source, line_color='white', line_width=1.5)
@@ -330,10 +335,12 @@ def draw_main_ax(x_range=None):
                 }
             });
             var pad_price = (max_price - min_price) * 0.05;
+            if ((min_price != Infinity) && (max_price != -Infinity) && (min_price != max_price)){
             window._autoscale_timeout = setTimeout(function() {
                 y_range.start = min_price - pad_price;
                 y_range.end = max_price + pad_price;
             });
+            }
             ''')
     MainAxisAutozoomCallback_end = CustomJS(
         args={'label_list': main_ax_peak_pricelabel_list, 'last_price_label': main_ax_last_price_label,
@@ -427,10 +434,12 @@ def draw_main_ax(x_range=None):
                                     }
                                 });
                                 var pad_price = (max_price - min_price) * 0.05;
+                                if ((min_price != Infinity) && (max_price != -Infinity) && (min_price != max_price)){
                                 window._autoscale_timeout_ds = setTimeout(function() {
                                     y_range.start = min_price - pad_price;
                                     y_range.end = max_price + pad_price;
                                 });
+                                }
                                   """)
     main_ax.x_range.js_on_change('start', MainAxisAutozoomCallback_start)
     main_ax.x_range.js_on_change('end', MainAxisAutozoomCallback_end)
@@ -645,9 +654,11 @@ def draw_time_grav_dist_mvol(indicator):
                         });
                     }
                 });
+                if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
                 var pad_val = (max_val - min_val) * 0.05;
                 y_range.start = min_val - pad_val;
                 y_range.end = max_val + pad_val;
+                }
                 ''')
     ds_change_callback = CustomJS(args={'x_range': time_grav_ax.x_range, 'y_range': time_grav_ax.y_range},
                                   code="""
@@ -703,11 +714,12 @@ def draw_time_grav_dist_mvol(indicator):
                                             }
                                         });
                                         var pad_val = (max_val - min_val) * 0.05;
-                                        
+                                        if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
                                         window._autoscale_timeout_1 = setTimeout(function() {
                                             y_range.start = min_val - pad_val;
                                             y_range.end = max_val + pad_val;        
                                         },100);  
+                                        }
                                       """)
     time_grav_ax.x_range.js_on_change('start', callback)
     time_grav_ax.x_range.js_on_change('end', callback)
@@ -794,9 +806,11 @@ def draw_time_grav_dist_lsd(indicator):
                         });
                     }
                 });
+                if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
                 var pad_val = (max_val - min_val) * 0.05;
                 y_range.start = min_val - pad_val;
                 y_range.end = max_val + pad_val;
+                }
                 ''')
     ds_change_callback = CustomJS(args={'x_range': time_grav_ax.x_range, 'y_range': time_grav_ax.y_range},
                                   code="""
@@ -852,11 +866,12 @@ def draw_time_grav_dist_lsd(indicator):
                                             }
                                         });
                                         var pad_val = (max_val - min_val) * 0.05;
-
+                                        if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
                                         window._autoscale_timeout_lsd = setTimeout(function() {
                                             y_range.start = min_val - pad_val;
                                             y_range.end = max_val + pad_val;        
-                                        },100);  
+                                        },100); 
+                                        } 
                                       """)
     time_grav_ax.x_range.js_on_change('start', callback)
     time_grav_ax.x_range.js_on_change('end', callback)
@@ -928,9 +943,11 @@ def draw_time_grav_dist_mtm(indicator):
                         });
                     }
                 });
+                if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
                 var pad_val = (max_val - min_val) * 0.05;
                 y_range.start = min_val - pad_val;
                 y_range.end = max_val + pad_val;
+                }
                 ''')
     ds_change_callback = CustomJS(args={'x_range': time_grav_ax.x_range, 'y_range': time_grav_ax.y_range},
                                   code="""
@@ -986,11 +1003,12 @@ def draw_time_grav_dist_mtm(indicator):
                                             }
                                         });
                                         var pad_val = (max_val - min_val) * 0.05;
-
+                                        if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
                                         window._autoscale_timeout_lsd = setTimeout(function() {
                                             y_range.start = min_val - pad_val;
                                             y_range.end = max_val + pad_val;        
                                         },100);  
+                                        }
                                       """)
     time_grav_ax.x_range.js_on_change('start', callback)
     time_grav_ax.x_range.js_on_change('end', callback)
@@ -1061,9 +1079,11 @@ def draw_time_grav_dist_trend(indicator):
                         });
                     }
                 });
+                if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
                 var pad_val = (max_val - min_val) * 0.05;
                 y_range.start = min_val - pad_val;
                 y_range.end = max_val + pad_val;
+                }
                 ''')
     ds_change_callback = CustomJS(args={'x_range': time_grav_ax.x_range, 'y_range': time_grav_ax.y_range},
                                   code="""
@@ -1119,11 +1139,12 @@ def draw_time_grav_dist_trend(indicator):
                                             }
                                         });
                                         var pad_val = (max_val - min_val) * 0.05;
-
+                                        if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
                                         window._autoscale_timeout_lsd = setTimeout(function() {
                                             y_range.start = min_val - pad_val;
                                             y_range.end = max_val + pad_val;        
                                         },100);  
+                                        }
                                       """)
     time_grav_ax.x_range.js_on_change('start', callback)
     time_grav_ax.x_range.js_on_change('end', callback)
@@ -1207,6 +1228,7 @@ def create_space_grav_ax():
                            )
     space_grav_ax.yaxis.major_label_text_alpha = 0
     space_grav_ax.margin = (0, 0, 0, 0)  # top、right、bottom、left margin
+    main_ax.ygrid.visible = False
 
 
 def calc_space_grav_dist(end_index, start_index=0):
@@ -1343,7 +1365,9 @@ def update(from_auto_refresh=False):
         tmp_end = main_ax.x_range.end
         tmp_data_end = ana_result.last_index
         try:
-            get_analyze_data(code)
+            ret = get_analyze_data(code)
+            if ret == 0:
+                return 0
         except Exception as e:
             print(e)
             message_show.text = "获取数据出错！"

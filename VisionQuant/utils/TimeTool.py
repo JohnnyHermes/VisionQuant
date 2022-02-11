@@ -134,6 +134,15 @@ def get_start_time(end_time, **kwargs):
     return dt_to_npdt64(start_time)
 
 
+def replace_time(t, **kwargs):
+    if isinstance(t, str):
+        t = str_to_dt(t)
+    elif isinstance(t, np.datetime64):
+        t = npdt64_to_dt(t)
+    res = t.replace(**kwargs)
+    return dt_to_npdt64(res)
+
+
 def time_delta(t1, t2):
     if isinstance(t1, datetime.datetime):
         t1 = dt_to_npdt64(t1)

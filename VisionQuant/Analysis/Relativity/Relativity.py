@@ -68,9 +68,11 @@ class Relativity(StrategyBase):
         self.last_index = None
         self.max_level = RELATIVITY_MAX_LEVEL
         self.min_step = 0.01
+        self.analyze_flag = False
 
     def analyze(self):
         t = time.perf_counter()
+        self.analyze_flag = False
         data = self.get_data()
         self.kdata = data.get_kdata('5')
         self.kdata.remove_zero_volume()  # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
@@ -157,10 +159,9 @@ class Relativity(StrategyBase):
             _replace_val = _data[_period - 1]
             return np.nan_to_num(_data, nan=_replace_val)
 
-        all_lisandu = ma_filter(all_lisandu, 8)
-        short_lisandu = ma_filter(short_lisandu, 8)
-        long_lisandu = ma_filter(long_lisandu, 8)
-        # print(np.mean(line_dist1['dindex']))
+        all_lisandu = ma_filter(all_lisandu, 9)
+        short_lisandu = ma_filter(short_lisandu, 9)
+        long_lisandu = ma_filter(long_lisandu, 9)
         # i = 12  # 平均一天12笔
         # buy_dindex_sum = 0
         # sell_dindex_sum = 0
@@ -172,6 +173,7 @@ class Relativity(StrategyBase):
         # final_index = []
         # final_index_new = []
         # test_index = []
+        # line_dist1 = time_grav_dict[0]
         # while i < line_dist1.shape[0]:
         #     tmp_line_dist = line_dist1[i - 12:i]
         #     for item in tmp_line_dist:
@@ -198,9 +200,10 @@ class Relativity(StrategyBase):
         #     {'name': 'mfi', 'index': vol_index, 'val': [buy_index, sell_index, final_index, final_index_new,test_index]})
 
         for level, line_dist in time_grav_dict.items():
-            index = line_dist['index']
-            width = line_dist['dindex']
-            dl = line_dist['dindex']
+            # index = line_dist['index']
+            # width = line_dist['dindex']
+            index = time_grav_dict[0]['index']
+            width = time_grav_dict[0]['dindex']
             # dp = line_dist['dprice']
             # buy_mask = np.where(dp > 0, 1, 0)
             # sell_mask = np.where(dp < 0, 1, 0)
@@ -209,12 +212,18 @@ class Relativity(StrategyBase):
             # val = v * (np.log2(1 + dp) + 0.0001) / dl
             # minus_list = np.where(line_dist['dprice'] < 0)
             # val[minus_list] *= -1
-            mean_allvol = (line_dist['buyvol'] + line_dist['sellvol']) / (
-                    line_dist['sellindex'] + line_dist['buyindex'])
+            # mean_allvol = (line_dist['buyvol'] + line_dist['sellvol']) / (
+            #         line_dist['sellindex'] + line_dist['buyindex'])
+            mean_allvol = np.array(pd.Series((time_grav_dict[0]['buyvol']+time_grav_dict[0]['sellvol']) / 2).ewm(span=3 ** level+1, min_periods=1).mean())
+            #mean_allvol = np.array(pd.Series((time_grav_dict[0]['buyvol']+time_grav_dict[0]['sellvol']) / 2).rolling(window=3 ** level * 2, min_periods=1).mean())
             line_dist['buyindex'][np.where(line_dist['buyindex'] == 0)] = 1
             line_dist['sellindex'][np.where(line_dist['sellindex'] == 0)] = 1
-            mean_buyvol = line_dist['buyvol'] / line_dist['buyindex']
-            mean_sellvol = line_dist['sellvol'] / line_dist['sellindex']
+            # mean_buyvol = line_dist['buyvol'] / line_dist['buyindex']
+            # mean_sellvol = line_dist['sellvol'] / line_dist['sellindex']
+            mean_buyvol = np.array(pd.Series(time_grav_dict[0]['buyvol']).ewm(span=3 ** level+1, min_periods=1).mean())
+            mean_sellvol = np.array(pd.Series(time_grav_dict[0]['sellvol']).ewm(span=3 ** level+1, min_periods=1).mean())
+            # mean_buyvol = np.array(pd.Series(time_grav_dict[0]['buyvol']).rolling(window=3 ** level * 2, min_periods=1).mean())
+            # mean_sellvol = np.array(pd.Series(time_grav_dict[0]['sellvol']).rolling(window=3 ** level * 2, min_periods=1).mean())
             # buyvol = all_vol * buy_mask / dl
             # sellvol = all_vol * sell_mask / dl
             self.indicators.append(
@@ -275,11 +284,13 @@ class Relativity(StrategyBase):
         self.zcyl = zcyl_set
         # print('calc peak dist', time.perf_counter() - t)
         t_analyze = time.perf_counter() - t
-        print("分析{}完成, 读取数据用时:{:.4f}s 分析用时:{:.4f}s".format(self.code.code, t_read_data, t_analyze))
+        self.analyze_flag = True
+        print("分析{} {}完成, 读取数据用时:{:.4f}s 分析用时:{:.4f}s".format(self.code.code, self.last_time,
+                                                              t_read_data, t_analyze))
         if self.show_result:
             obj = RelativityVisualize(figure_title=self.code.code + ' ' + TimeTool.time_to_str(self.last_time),
-                                     indicators_num=len(self.indicators),
-                                     min_step=self.min_step)
+                                      indicators_num=len(self.indicators),
+                                      min_step=self.min_step)
             obj.draw_main(points_set=self.time_grav.get_all_points(), last_price=self.last_price)
             obj.draw_zcyl(zcyl_list=zcyl_set)
             obj.draw_CM(space_gravitation_dist=cm_dist0)
@@ -311,7 +322,8 @@ class Relativity(StrategyBase):
         else:
             self.min_step = 0.01
 
-        self.time_grav = relativity_cy.TimeGravitation(high, low, min_step=self.min_step, max_level=RELATIVITY_MAX_LEVEL)
+        self.time_grav = relativity_cy.TimeGravitation(high, low, min_step=self.min_step,
+                                                       max_level=RELATIVITY_MAX_LEVEL)
         score = self.time_grav.get_score()
         # t_analyze = time.perf_counter() - t
         # print("分析{}完成, 日期:{}, 得分:{}, 读取数据用时:{:.4f}s 分析用时:{:.4f}s".format(
@@ -338,7 +350,7 @@ class Relativity(StrategyBase):
 
     def show(self, points_set, zcyl_list, cm_dist):
         obj = RelativityVisualize(figure_title=self.code.code + ' ' + TimeTool.time_to_str(self.last_time),
-                                 indicators_num=1)
+                                  indicators_num=1)
         obj.draw_main(points_set, self.last_price)
         obj.draw_zcyl(zcyl_list)
         obj.draw_CM(cm_dist)
