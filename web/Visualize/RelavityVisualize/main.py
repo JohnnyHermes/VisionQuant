@@ -13,27 +13,10 @@ from bokeh import events
 
 from VisionQuant.utils import TimeTool
 from VisionQuant.utils.Code import Code
-import datetime
-from VisionQuant.DataCenter.DataFetch import DataSource
+from VisionQuant.DataCenter.DataFetch import DEFAULT_ASHARE_DATA_SOURCE
 from VisionQuant.Analysis.Relativity.Relativity import Relativity
 from VisionQuant.Analysis.Relativity import relativity_cy
-from VisionQuant.utils.Params import DEFAULT_ASHARE_LOCAL_DATASOURCE, DEFAULT_ASHARE_LIVE_DATASOURCE
 
-if DEFAULT_ASHARE_LOCAL_DATASOURCE == 'Default':
-    local_source = DataSource.Local.Default
-elif DEFAULT_ASHARE_LOCAL_DATASOURCE == 'VQapi':
-    local_source = DataSource.Local.VQapi
-elif DEFAULT_ASHARE_LOCAL_DATASOURCE == 'VQtdx':
-    local_source = DataSource.Local.VQtdx
-else:
-    local_source = DataSource.Local.Default
-
-if DEFAULT_ASHARE_LIVE_DATASOURCE == 'VQtdx':
-    live_source = DataSource.Live.VQtdx
-elif DEFAULT_ASHARE_LIVE_DATASOURCE == 'VQapi':
-    live_source = DataSource.Live.VQapi
-else:
-    live_source = DataSource.Live.VQtdx
 
 curdoc().theme = 'dark_minimal'
 MAIN_WEIGHT = 1700
@@ -1351,11 +1334,10 @@ def update(from_auto_refresh=False):
     else:
         new_code = code.code
     end_time = TimeTool.get_now_time('datetime')
-    start_time = end_time - datetime.timedelta(days=365 + 180)
-    start_time = start_time.replace(hour=9, minute=0, second=0)
+    start_time = TimeTool.get_start_time(end_time, days=365+180)
     try:
         code = Code(new_code, '5', start_time, end_time=end_time,
-                    data_source={'local': local_source, 'live': live_source})
+                    data_source=DEFAULT_ASHARE_DATA_SOURCE)
     except Exception as e:
         print(e)
         message_show.text = "输入代码错误！"
@@ -1367,7 +1349,7 @@ def update(from_auto_refresh=False):
         try:
             ret = get_analyze_data(code)
             if ret == 0:
-                return 0
+                return
         except Exception as e:
             print(e)
             message_show.text = "获取数据出错！"
@@ -1378,7 +1360,6 @@ def update(from_auto_refresh=False):
             else:
                 x_range_end = ana_result.last_index + (tmp_end - tmp_data_end)
                 x_range_start = ana_result.last_index - (tmp_data_end - tmp_start)
-            # update_main_ax(x_range=(x_range_start, x_range_end))
             if tmp_code != code.code:
                 create_main_ax()
                 draw_main_ax(x_range=(x_range_start, x_range_end))
@@ -1433,9 +1414,9 @@ def get_chart():
 
 
 end_time = TimeTool.get_now_time(return_type='datetime')
-start_time = TimeTool.get_start_time(end_time, days=365 + 180)
+start_time = TimeTool.get_start_time(end_time, days=365+180)
 code = Code('999999', '5', start_time, end_time=end_time,
-            data_source={'local': local_source, 'live': live_source})
+            data_source=DEFAULT_ASHARE_DATA_SOURCE)
 
 get_analyze_data(code)
 create_main_ax()
@@ -1450,27 +1431,5 @@ configure_tools()
 
 get_chart()
 curdoc().add_root(layout)
-# curdoc().on_session_destroyed(cleanup_session)
 curdoc().title = "Analyze"
 
-# if __name__ == '__main__':
-#     end_time = TimeTool.str_to_dt('2022-01-29 15:00:00')
-#     start_time = end_time - datetime.timedelta(days=365+180)
-#     start_time = start_time.replace(hour=9, minute=0, second=0)
-#     test_code = '999999'
-#     code = Code(test_code, '5', start_time, end_time=end_time,
-#                 data_source={'local': DataSource.Local.VQapi, 'live': DataSource.Live.VQtdx})
-#     get_analyze_data(code)
-#     create_main_ax()
-#     draw_main_ax()
-#     create_time_grav_ax()
-#     draw_time_grav_dist()
-#     create_space_grav_ax()
-#     draw_space_grav_dist()
-#     create_tool_ax()
-#     get_chart()
-#     curdoc().add_root(layout)
-#     curdoc().title = "Analyze"
-#     # show(layout, width=1920, height=1080)  # open a browser
-#     # chart_obj = RelativityChart(t_code)
-#     # chart_obj.get_chart()

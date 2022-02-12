@@ -219,8 +219,7 @@ class DataServer:
         if code.market not in [Market.Ashare.MarketSH.STOCK, Market.Ashare.MarketSZ.STOCK]:
             return None
         if self.basic_finance_data is None:
-            from VisionQuant.DataCenter.DataFetch import DataSource
-            data_source = DataSource.Local.Default
+            data_source = DataFetch.DEFAULT_BASIC_FINANCE_DATA_DATASOURCE
             sk = self.sk_client_mng.init_socket(data_source)
             self.basic_finance_data = data_source.fetch_basic_finance_data(sk, Market.Ashare)
             if len(self.basic_finance_data) == 0:

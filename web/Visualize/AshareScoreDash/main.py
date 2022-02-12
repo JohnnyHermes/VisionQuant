@@ -1,28 +1,21 @@
-import time
-
 import numpy as np
 import pandas as pd
-from bokeh.document import Document
 
-from bokeh.layouts import gridplot, column, row
-from bokeh.models import ColumnDataSource, CustomJS, DataRange1d, BoxSelectTool, Div, RadioButtonGroup, TableColumn, \
-    DataTable, Span, Button, Label, CompositeTicker, Select, TextInput, NumeralTickFormatter, WheelZoomTool, ResetTool, \
-    PanTool, CheckboxGroup, Paragraph, PolyDrawTool, PolyEditTool, Title, DatePicker, RadioGroup, LogAxis, BoxAnnotation
-from bokeh.themes import built_in_themes
+from bokeh.layouts import column, row
+from bokeh.models import ColumnDataSource, CustomJS, DataRange1d, RadioButtonGroup, TableColumn, \
+    DataTable, Span, Button, Label, Select, TextInput, NumeralTickFormatter, WheelZoomTool, ResetTool, \
+    PanTool, CheckboxGroup, Paragraph, Title, DatePicker, RadioGroup, BoxAnnotation
 from bokeh.io import curdoc
 from bokeh.models import HoverTool, CrosshairTool
-from bokeh.models.widgets import Panel, Tabs
 # 导入颜色模块
 # 在notebook中创建绘图空间
-from bokeh.palettes import Spectral11, Set2_6, Bokeh6, Pastel1_9, Pastel2_8, Set2_8
+from bokeh.palettes import Set2_8
 from bokeh.plotting import figure
 from bokeh import events
 import bokeh
 
 from VisionQuant.DataCenter.CodePool import AshareCodePool
 from VisionQuant.utils import TimeTool
-from VisionQuant.utils.Code import Code
-import datetime
 from VisionQuant.DataCenter.DataFetch import DataSource
 from VisionQuant.Analysis.Relativity.Relativity import Relativity
 from VisionQuant.utils.Params import Market
@@ -653,8 +646,7 @@ blocks_datasource = ColumnDataSource(df_select(blocks_source_data, 'time', last_
 blocks_datasource.selected.on_change('indices', blocks_datasource_selected_change_callback)
 
 end_time = TimeTool.get_now_time(return_type='datetime')
-start_time = end_time - datetime.timedelta(days=365 + 180)
-start_time = start_time.replace(hour=9, minute=0, second=0)
+start_time = TimeTool.get_start_time(end_time, days=365+180)
 all_code_dict = code_pool.get_all_code(start_time=start_time, end_time=end_time)
 code = all_code_dict['999999']
 get_analyze_data(code)

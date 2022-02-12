@@ -12,7 +12,9 @@ from VisionQuant.DataCenter.VQTdx.TdxHqAPI import ResponseRecvFailed, SendReques
 from VisionQuant.utils import TimeTool, JsonTool
 from VisionQuant.DataCenter.VQTdx.TdxSocketClient import TdxStdHqSocketClient
 from VisionQuant.DataCenter.VQTdx.TdxReader import TdxStdReader
-from VisionQuant.utils.Params import Market, LOCAL_DIR, HDF5_COMPLIB, HDF5_COMP_LEVEL, EXCEPT_CODELIST, REMOTE_ADDR
+from VisionQuant.utils.Params import Market, LOCAL_DIR, HDF5_COMPLIB, HDF5_COMP_LEVEL, EXCEPT_CODELIST, REMOTE_ADDR, \
+    _DEFAULT_ASHARE_LOCAL_DATASOURCE, _DEFAULT_ASHARE_LIVE_DATASOURCE, _DEFAULT_CODELIST_DATASOURCE, \
+    _DEFAULT_BLOCKS_DATA_DATASOURCE, _DEFAULT_BASIC_FINANCE_DATA_DATASOURCE
 from VisionQuant.DataCenter.DataStore import anadata_store_market_transform, kdata_store_market_transform
 from VisionQuant.utils.VQlog import logger
 
@@ -1020,12 +1022,10 @@ def mergeKdata(kdata, period, new_period):
     return new_out_df
 
 
-"""
-数据获取方法
-"""
-
-
 class DataSource(object):
+    """
+    数据获取方法
+    """
     class Local:
         VQtdx = DataSourceTdxLocal
         VQapi = DataSourceVQAPI
@@ -1034,6 +1034,56 @@ class DataSource(object):
     class Live:
         VQtdx = DataSourceTdxLive
         VQapi = DataSourceVQAPI
+
+
+"""
+默认数据获取方法
+"""
+#  默认本地A股K线数据获取方法
+if _DEFAULT_ASHARE_LOCAL_DATASOURCE == 'Default':
+    DEFAULT_ASHARE_LOCAL_DATASOURCE = DataSource.Local.Default
+elif _DEFAULT_ASHARE_LOCAL_DATASOURCE == 'VQapi':
+    DEFAULT_ASHARE_LOCAL_DATASOURCE = DataSource.Local.VQapi
+elif _DEFAULT_ASHARE_LOCAL_DATASOURCE == 'VQtdx':
+    DEFAULT_ASHARE_LOCAL_DATASOURCE = DataSource.Local.VQtdx
+else:
+    DEFAULT_ASHARE_LOCAL_DATASOURCE = DataSource.Local.Default
+#  默认实时A股K线数据获取方法
+if _DEFAULT_ASHARE_LIVE_DATASOURCE == 'VQtdx':
+    DEFAULT_ASHARE_LIVE_DATASOURCE = DataSource.Live.VQtdx
+elif _DEFAULT_ASHARE_LIVE_DATASOURCE == 'VQapi':
+    DEFAULT_ASHARE_LIVE_DATASOURCE = DataSource.Live.VQapi
+else:
+    DEFAULT_ASHARE_LIVE_DATASOURCE = DataSource.Live.VQtdx
+DEFAULT_ASHARE_DATA_SOURCE = {'local': DEFAULT_ASHARE_LOCAL_DATASOURCE, 'live': DEFAULT_ASHARE_LIVE_DATASOURCE}
+
+#  默认代码列表数据获取方法
+if _DEFAULT_CODELIST_DATASOURCE == 'Default':
+    DEFAULT_CODELIST_DATASOURCE = DataSource.Local.Default
+elif _DEFAULT_CODELIST_DATASOURCE == 'VQapi':
+    DEFAULT_CODELIST_DATASOURCE = DataSource.Local.VQapi
+elif _DEFAULT_CODELIST_DATASOURCE == 'VQtdx':
+    DEFAULT_CODELIST_DATASOURCE = DataSource.Local.VQtdx
+else:
+    DEFAULT_CODELIST_DATASOURCE = DataSource.Local.Default
+
+#  默认板块数据获取方法
+if _DEFAULT_BLOCKS_DATA_DATASOURCE == 'Default':
+    DEFAULT_BLOCKS_DATA_DATASOURCE = DataSource.Local.Default
+elif _DEFAULT_BLOCKS_DATA_DATASOURCE == 'VQapi':
+    DEFAULT_BLOCKS_DATA_DATASOURCE = DataSource.Local.VQapi
+elif _DEFAULT_BLOCKS_DATA_DATASOURCE == 'VQtdx':
+    DEFAULT_BLOCKS_DATA_DATASOURCE = DataSource.Local.VQtdx
+else:
+    DEFAULT_BLOCKS_DATA_DATASOURCE = DataSource.Local.Default
+
+#  默认基本经济数据获取方法
+if _DEFAULT_BASIC_FINANCE_DATA_DATASOURCE == 'Default':
+    DEFAULT_BASIC_FINANCE_DATA_DATASOURCE = DataSource.Local.Default
+elif _DEFAULT_BASIC_FINANCE_DATA_DATASOURCE == 'VQapi':
+    DEFAULT_BASIC_FINANCE_DATA_DATASOURCE = DataSource.Local.VQapi
+else:
+    DEFAULT_BASIC_FINANCE_DATA_DATASOURCE = DataSource.Local.Default
 
 
 if __name__ == '__main__':
