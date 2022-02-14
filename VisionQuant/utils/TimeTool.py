@@ -97,7 +97,6 @@ def get_now_time(return_type: str = 'npdt64'):
         return dt_to_str(datetime.datetime.now())
     elif return_type == 'npdt64':
         return dt_to_npdt64(datetime.datetime.now())
-
     else:
         raise ValueError
 
@@ -112,10 +111,10 @@ def is_trade_time(market):
             date_str = time_to_str(nowtime, '%Y-%m-%d')
             if date_str not in ASHARE_TRADE_DATE:
                 return 0
-        t1 = nowtime.replace(hour=9, minute=30, second=0)
+        t1 = nowtime.replace(hour=9, minute=30, second=0, microsecond=0)
         # t2 = nowtime.replace(hour=11, minute=30, second=15)
         # t3 = nowtime.replace(hour=13, minute=0, second=0)
-        t4 = nowtime.replace(hour=15, minute=0, second=15)
+        t4 = nowtime.replace(hour=15, minute=0, second=15, microsecond=0)
         # if t1 <= nowtime <= t2 or t3 <= nowtime <= t4:
         if t1 <= nowtime <= t4:
             return 1
@@ -130,9 +129,33 @@ def get_start_time(end_time, **kwargs):
         end_time = str_to_dt(end_time)
     elif isinstance(end_time, np.datetime64):
         end_time = npdt64_to_dt(end_time)
-    start_time = end_time - datetime.timedelta(**kwargs)
-    start_time = start_time.replace(hour=0, minute=0, second=0)
+    start_time = time_minus(end_time, standardization=False ,**kwargs)
+    start_time = start_time.replace(hour=0, minute=0, second=0, microsecond=0)
     return dt_to_npdt64(start_time)
+
+
+def time_plus(t, standardization=True, **kwargs):
+    if isinstance(t, str):
+        t = str_to_dt(t)
+    elif isinstance(t, np.datetime64):
+        t = npdt64_to_dt(t)
+    new_t = t + datetime.timedelta(**kwargs)
+    if standardization:
+        return time_standardization(new_t)
+    else:
+        return new_t
+
+
+def time_minus(t, standardization=True, **kwargs):
+    if isinstance(t, str):
+        t = str_to_dt(t)
+    elif isinstance(t, np.datetime64):
+        t = npdt64_to_dt(t)
+    new_t = t - datetime.timedelta(**kwargs)
+    if standardization:
+        return time_standardization(new_t)
+    else:
+        return new_t
 
 
 def replace_time(t, **kwargs):

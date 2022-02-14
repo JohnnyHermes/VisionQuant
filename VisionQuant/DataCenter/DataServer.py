@@ -154,9 +154,8 @@ class DataServer:
                             freq = code.frequency
                         else:
                             freq = code.frequency[0]
-                        if self.data_dict[code.code].get_kdata(freq).get_start_time() > \
-                                TimeTool.time_standardization(code.start_time):
-                            self.add_data(code)
+                        if self.data_dict[code.code].get_kdata(freq).get_start_time() > code.start_time:
+                            self.repair_data(code)
                         tmp_datastruct = self.data_dict[code.code].fliter(key='time',
                                                                           start=code.start_time, end=code.end_time)
                         return_data[code.code] = tmp_datastruct
@@ -178,9 +177,8 @@ class DataServer:
                         freq = codes.frequency
                     else:
                         freq = codes.frequency[0]
-                    if self.data_dict[codes.code].get_kdata(freq).get_start_time() > \
-                            TimeTool.time_standardization(codes.start_time):
-                        self.add_data(codes)
+                    if self.data_dict[codes.code].get_kdata(freq).get_start_time() > codes.start_time:
+                        self.repair_data(codes)
                     tmp_datastruct = self.data_dict[codes.code].fliter(key='time',
                                                                        start=codes.start_time, end=codes.end_time)
                     return tmp_datastruct
@@ -213,6 +211,21 @@ class DataServer:
             fetch_data = code.data_source_live.fetch_kdata(socket_client, tmp_code)
             self.data_dict[code.code].get_kdata(code.frequency).update(fetch_data)
         self.last_update_time = TimeTool.get_now_time(return_type='datetime')
+        return self.data_dict[code.code]
+
+    def repair_data(self, code):
+        tmp_code = code.copy()
+        tmp_code.start_time = TimeTool.get_start_time(tmp_code.start_time, days=7)
+        tmp_code.end_time = TimeTool.time_plus(tmp_code.start_time, days=7)
+        socket_client = self.sk_client_mng.init_socket(code.data_source_local)
+        if isinstance(code.frequency, list):
+            for freq in code.frequency:
+                tmp_code.frequency = freq
+                fetch_data = code.data_source_local.fetch_kdata(socket_client, tmp_code)
+                self.data_dict[code.code].get_kdata(freq).repair(fetch_data)
+        else:
+            fetch_data = code.data_source_local.fetch_kdata(socket_client, tmp_code)
+            self.data_dict[code.code].get_kdata(code.frequency).repair(fetch_data)
         return self.data_dict[code.code]
 
     def get_basic_finance_data(self, code):

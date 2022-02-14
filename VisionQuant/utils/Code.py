@@ -148,17 +148,17 @@ class Code:
             if 'local' in data_source:
                 self.data_source_local = data_source['local']
             else:
-                from VisionQuant.DataCenter.DataFetch import DataSource
-                self.data_source_local = DataSource.Local.Default
+                from VisionQuant.DataCenter.DataFetch import DEFAULT_ASHARE_LOCAL_DATASOURCE
+                self.data_source_local = DEFAULT_ASHARE_LOCAL_DATASOURCE
             if 'live' in data_source:
                 self.data_source_live = data_source['live']
             else:
-                from VisionQuant.DataCenter.DataFetch import DataSource
-                self.data_source_live = DataSource.Live.VQtdx
+                from VisionQuant.DataCenter.DataFetch import DEFAULT_ASHARE_LIVE_DATASOURCE
+                self.data_source_live = DEFAULT_ASHARE_LIVE_DATASOURCE
         else:
-            from VisionQuant.DataCenter.DataFetch import DataSource
-            self.data_source_local = DataSource.Local.Default
-            self.data_source_live = DataSource.Live.VQtdx
+            from VisionQuant.DataCenter.DataFetch import DEFAULT_ASHARE_DATA_SOURCE
+            self.data_source_local = DEFAULT_ASHARE_DATA_SOURCE['local']
+            self.data_source_live = DEFAULT_ASHARE_DATA_SOURCE['live']
 
     def copy(self):
         return copy.deepcopy(self)

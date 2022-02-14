@@ -107,6 +107,13 @@ class KDataStruct:
             self.data = self.data.reset_index(drop=True)
         return self
 
+    def repair(self, new_kdata):
+        if len(new_kdata) == 0:
+            return self
+        tmp_ori_data = self.data[self.data['time'] > new_kdata['time'].values[len(new_kdata['time'])-1]]
+        self.data = concat([new_kdata, tmp_ori_data])
+        return self
+
 
 class BaseDataStruct:
     def __init__(self, code: object, kdata_dict):

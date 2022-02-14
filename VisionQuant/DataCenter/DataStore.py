@@ -48,7 +48,7 @@ def store_kdata_to_hdf5(datastruct):
         store.close()
 
 
-def store_relativity_score_data_to_hdf5(result_df, market=Market.Ashare):
+def store_relativity_score_data_to_hdf5(result_df, market=Market.Ashare, append=True):
     try:
         fname = 'relativity_analyze_result.h5'
         fpath = Path('/'.join([LOCAL_DIR, 'AnalyzeData', fname]))
@@ -62,11 +62,11 @@ def store_relativity_score_data_to_hdf5(result_df, market=Market.Ashare):
     else:
         key = anadata_store_market_transform(market)
         if len(result_df) > 0:
-            store.put(key=key, value=result_df, format='table', append=True)
+            store.put(key=key, value=result_df, format='table', append=append)
         store.close()
 
 
-def store_blocks_score_data_to_hdf5(result_df, market=Market.Ashare):
+def store_blocks_score_data_to_hdf5(result_df, market=Market.Ashare, append=True):
     try:
         fname = 'blocks_score_analyze_result.h5'
         fpath = Path('/'.join([LOCAL_DIR, 'AnalyzeData', fname]))
@@ -80,7 +80,7 @@ def store_blocks_score_data_to_hdf5(result_df, market=Market.Ashare):
     else:
         key = anadata_store_market_transform(market)
         if len(result_df) > 0:
-            store.put(key=key, value=result_df, format='table', append=True)
+            store.put(key=key, value=result_df, format='table', append=append)
         store.close()
 
 
