@@ -26,7 +26,7 @@ parser.add_argument('-m', "--market", help="要更新的市场,目前支持Ashar
 parser.add_argument('-c', "--code", help="指定要更新的股票代码，主要用于修复数据", nargs='+')
 parser.add_argument('-d', "--date", help="指定要分析的日期，主要用于修复分析数据，仅在level=analyze时生效", nargs='+')
 parser.add_argument("-u", "--update", help="要更新的数据", default='all', nargs='+',
-                    choices=['basic', 'kdata', 'analyze', 'all'])
+                    choices=['basic', 'kdata', 'analyze','relativity', 'blocks_score', 'all'])
 
 args = parser.parse_args()
 
@@ -88,6 +88,11 @@ class AshareDataUpdate(DataUpdateBase):
                 self._update_kdata()
             if 'analyze' in self.update_type:
                 self._update_analyze_data()
+            else:
+                if 'relativity' in self.update_type:
+                    self._update_relativity_analyze_data()
+                if 'blocks_score' in self.update_type:
+                    self._update_blocks_score_data()
 
     def _update_basic_data(self):
         self._update_codelist()
