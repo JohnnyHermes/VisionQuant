@@ -44,7 +44,7 @@ def repair_blocks_score_data(_market, dates: list):
     sk = data_source.sk_client().init_socket()
     data = data_source.fetch_blocks_score_data(sk, market=_market)
     new_data_df = data[data['time'].apply(lambda x: x not in dates)]
-    store_relativity_score_data_to_hdf5(new_data_df, market=_market, append=False)
+    store_blocks_score_data_to_hdf5(new_data_df, market=_market, append=False)
     logger.success("修复blocks score data成功!")
 
 

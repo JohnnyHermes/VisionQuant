@@ -17,6 +17,7 @@ from VisionQuant.utils import TimeTool
 from VisionQuant.utils.VQlog import logger
 import argparse
 
+
 # 命令行参数解析
 parser = argparse.ArgumentParser()
 parser.add_argument('-f', "--force_update", help="不考虑是否为交易日，强制更新数据",
@@ -139,6 +140,9 @@ class AshareDataUpdate(DataUpdateBase):
                 return None
 
         for _date in self.analyze_date:
+            if _date not in TimeTool.ASHARE_TRADE_DATE:
+                print("{} 不是A股交易日，将跳过...".format(_date))
+                continue
             logger.info("开始更新 {} 的Relativity Analyze数据...".format(_date))
             tmp_end_time = TimeTool.str_to_dt(_date + ' 15:00:00')
             tmp_start_time = TimeTool.get_start_time(tmp_end_time, days=365 + 180)
