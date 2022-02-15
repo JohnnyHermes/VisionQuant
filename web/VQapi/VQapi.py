@@ -101,6 +101,6 @@ def fetch_basic_finance_data(market: str):
 
 
 if __name__ == "__main__":
-    # 启动服务，因为我们这个文件叫做 main.py，所以需要启动 main.py 里面的 app
+    # 启动服务，因为我们这个文件叫做 VQapi.py，所以需要启动 VQapi.py 里面的 app
     # 第一个参数 "main:app" 就表示这个含义，然后是 host 和 port 表示监听的 ip 和端口
-    uvicorn.run("main:app", host="0.0.0.0", port=5555)
+    uvicorn.run("VQapi:app", host="0.0.0.0", port=5555)
