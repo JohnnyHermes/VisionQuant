@@ -575,7 +575,7 @@ def get_score_ax_ds(df_data, show_key='score'):
     res_data['index'] = list(range(len(df_data)))
     res_data['time'] = df_data['time'].to_list()
     res_data['value'] = df_data[show_key].to_list()
-    res_data['mean_value'] = df_data[show_key].rolling(window=10, min_periods=1).mean()
+    res_data['mean_value'] = df_data[show_key].rolling(window=5, min_periods=1).mean()
     return res_data
 
 
@@ -587,13 +587,12 @@ def draw_score_ax():
         score_ax.x_range.start = 0
         score_ax.x_range.end = 1
     else:
-        score_ax.x_range.bounds = (0, end_index)
+        score_ax.x_range.bounds = (0, end_index+1)
         if len(score_ax_ds.data['index']) > 40:
             score_ax.x_range.start = end_index - 40
         else:
             score_ax.x_range.start = end_index - len(score_ax_ds.data['index']) + 1
-        score_ax.x_range.end = end_index
-    score_ax.x_range.end = end_index
+        score_ax.x_range.end = end_index+1
     score_ax.line(x='index', y='value', source=score_ax_ds, line_width=2, line_color='white')
     score_ax.line(x='index', y='mean_value', source=score_ax_ds, line_width=2, line_color='yellow')
     xaxis_label_dict = dict(zip(score_ax_ds.data['index'], score_ax_ds.data['time']))
@@ -618,12 +617,12 @@ def update_score_ax(new_data, name=None, data_class=None):
         score_ax.x_range.start = 0
         score_ax.x_range.end = 1
     else:
-        score_ax.x_range.bounds = (0, end_index)
+        score_ax.x_range.bounds = (0, end_index+1)
         if len(score_ax_ds.data['index']) > 40:
             score_ax.x_range.start = end_index - 40
         else:
             score_ax.x_range.start = end_index - len(score_ax_ds.data['index']) + 1
-        score_ax.x_range.end = end_index
+        score_ax.x_range.end = end_index+1
     xaxis_label_dict = dict(zip(score_ax_ds.data['index'], score_ax_ds.data['time']))
     score_ax.xaxis.major_label_overrides = xaxis_label_dict
 

@@ -638,6 +638,7 @@ class AshareBasicDataAPI:
         temp_df["换手率"] = pd.to_numeric(temp_df["换手率"], errors="coerce")
         temp_df["市盈率-动态"] = pd.to_numeric(temp_df["市盈率-动态"], errors="coerce")
         temp_df["市净率"] = pd.to_numeric(temp_df["市净率"], errors="coerce")
+        temp_df[temp_df["换手率"] == 0] = 1  # 防止除0
         temp_df['流通股本'] = temp_df['成交量'] * 10000 / temp_df['换手率']
         res_df = temp_df[["代码", '流通股本', '市盈率-动态', "市净率"]]
         return res_df
@@ -1026,6 +1027,7 @@ class DataSource(object):
     """
     数据获取方法
     """
+
     class Local:
         VQtdx = DataSourceTdxLocal
         VQapi = DataSourceVQAPI
@@ -1084,7 +1086,6 @@ elif _DEFAULT_BASIC_FINANCE_DATA_DATASOURCE == 'VQapi':
     DEFAULT_BASIC_FINANCE_DATA_DATASOURCE = DataSource.Local.VQapi
 else:
     DEFAULT_BASIC_FINANCE_DATA_DATASOURCE = DataSource.Local.Default
-
 
 if __name__ == '__main__':
     sk_client_mng = SocketClientsManager()

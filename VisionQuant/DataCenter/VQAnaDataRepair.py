@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-m', "--market", help="要修复的市场,目前支持Ashare(A股)", nargs='+', default='Ashare')
 parser.add_argument('-d', "--date", required=True, help="指定要修复的日期", nargs='+')
 parser.add_argument('-r', "--repair", required=True, help="指定要修复的类型", nargs='+',
-                    choices=['relativity', 'block_score'])
+                    choices=['relativity', 'blocks_score'])
 today_date = TimeTool.time_to_str(TimeTool.get_now_time(), '%Y-%m-%d')
 args = parser.parse_args()
 
@@ -70,7 +70,7 @@ if __name__ == '__main__':
             else:
                 if 'relativity' in repair_type:
                     repair_relativity_data(Market.Ashare, repair_dates)
-                if 'block_score' in repair_type:
+                if 'blocks_score' in repair_type:
                     repair_blocks_score_data(Market.Ashare, repair_dates)
         else:
             logger.error("输入错误的参数-m {}".format(args.market))
