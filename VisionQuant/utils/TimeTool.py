@@ -129,7 +129,7 @@ def get_start_time(end_time, **kwargs):
         end_time = str_to_dt(end_time)
     elif isinstance(end_time, np.datetime64):
         end_time = npdt64_to_dt(end_time)
-    start_time = time_minus(end_time, standardization=False ,**kwargs)
+    start_time = time_minus(end_time, standardization=False, **kwargs)
     start_time = start_time.replace(hour=0, minute=0, second=0, microsecond=0)
     return dt_to_npdt64(start_time)
 

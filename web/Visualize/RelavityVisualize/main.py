@@ -16,6 +16,7 @@ from VisionQuant.utils.Code import Code
 from VisionQuant.DataCenter.DataFetch import DEFAULT_ASHARE_DATA_SOURCE
 from VisionQuant.Analysis.Relativity.Relativity import Relativity
 from VisionQuant.Analysis.Relativity import relativity_cy
+import Draw
 
 curdoc().theme = 'dark_minimal'
 MAIN_WEIGHT = 1700
@@ -72,10 +73,11 @@ indicator_select: bokeh.models.widgets.Select
 space_grav_calc_mode = RadioButtonGroup(labels=['无', '正常', '累加'], active=0, height=30, width=190)
 
 # tool: 代码输入框
-code_input = TextInput(value="", placeholder="输入代码", height=30, width=100)
+code_input = TextInput(value="", placeholder="输入代码", height=30, width=70)
 
 # tool: 刷新按钮
-refresh_button = Button(label="刷新", button_type="success", height=30, width=80)
+refresh_button = Button(label="刷新", button_type="success", height=30, width=50)
+save_button = Button(label="保存", button_type="success", height=30, width=50)
 
 # tool: 十字
 crosshair = CrosshairTool(line_color='#888888')
@@ -102,6 +104,22 @@ def get_analyze_data(_code):
     strategy_obj.analyze()
     if strategy_obj.analyze_flag:
         ana_result = strategy_obj
+        # 获取过去保存的画笔
+        drawing_data = Draw.get_drawing(_code.code)
+        if drawing_data:
+            time_series = [TimeTool.time_to_str(t) for t in ana_result.kdata.data['time']]
+            try:
+                new_index = time_series.index(drawing_data['save_time']['time'])
+                offset = new_index - drawing_data['save_time']['index']
+            except ValueError:
+                offset = 0
+            for line_x in drawing_data['line_data']['xs']:
+                line_x[0] += offset
+                line_x[1] += offset
+            multi_line_source.data = drawing_data['line_data']
+        else:
+            multi_line_source.data = {}
+        # 确认decimal_num
         if ana_result.min_step - 0.001 < 1e-6:
             decimal_num = 3
         else:
@@ -112,7 +130,7 @@ def get_analyze_data(_code):
 
 
 def create_main_ax():
-    global main_ax
+    global main_ax, multi_line_source
     main_ax = figure(plot_width=MAIN_WEIGHT, plot_height=MAIN_HEIGHT,
                      toolbar_location='above',
                      tools=TOOLS,
@@ -533,7 +551,6 @@ def create_time_grav_ax():
     time_grav_ax.yaxis.major_label_standoff = 0
     time_grav_ax.min_border_right = 50
     time_grav_dist_source = ColumnDataSource()
-    time_grav_dist_source.on_change('data', time_grav_ds_changed_callback)
 
 
 def configure_time_grav_ax_yrange(data_dict, start=None, end=None, is_mvol=False):
@@ -586,129 +603,6 @@ def draw_time_grav_dist_mvol(indicator):
     time_grav_ax.circle(x='index', y='sellvol', source=time_grav_dist_source,
                         color='green')
     configure_time_grav_ax_yrange(new_data, is_mvol=True)
-    callback = CustomJS(
-        args={'y_range': time_grav_ax.y_range, 'data_source': time_grav_dist_source},
-        code='''
-                var index = data_source.data['index'],
-                    columns_name_list = Object.keys(data_source.data),
-                    min_val = Infinity,
-                    max_val = -Infinity,
-                    start = cb_obj.start,
-                    end = cb_obj.end,
-                    low = 0,
-                    high = index.length-1,
-                    mid = Math.round((low+high) / 2),
-                    start_i = 0,
-                    end_i = 0,
-                    i = 0;
-                while (low < high && mid != high){
-                    if (index[mid] < start){
-                        low = mid;
-                    }else if(index[mid] > start) {
-                        high = mid;
-                    }else{
-                        break;
-                    }
-                    mid = Math.round((low+high) / 2);
-                };
-                start_i = high;
-                low = 0;
-                high = index.length-1;
-                mid = Math.round((low+high) / 2);
-                while (low < high && mid != high){
-                    if (index[mid] < end){
-                        low = mid;
-                    }else if(index[mid] > end) {
-                        high = mid;
-                    }else{
-                        break;
-                    }
-                    mid = Math.round((low+high) / 2);
-                };
-                end_i = high;
-                columns_name_list.forEach((name) => {
-                    if (name != 'index'){
-                        var val_list = data_source.data[name].slice(start_i,end_i+1);
-                        val_list.forEach((val) => {
-                            if (val > max_val) {
-                                max_val = val;
-                            }
-                            if (val < min_val && val > 0.000000001) {
-                                min_val = val;
-                            }
-                        });
-                    }
-                });
-                if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
-                var pad_val = (max_val - min_val) * 0.05;
-                y_range.start = min_val - pad_val;
-                y_range.end = max_val + pad_val;
-                }
-                ''')
-    ds_change_callback = CustomJS(args={'x_range': time_grav_ax.x_range, 'y_range': time_grav_ax.y_range},
-                                  code="""
-                                        clearTimeout(window._autoscale_timeout_1);
-                                            var index = cb_obj.data['index'],
-                                            columns_name_list = Object.keys(cb_obj.data),
-                                            min_val = Infinity,
-                                            max_val = -Infinity,
-                                            start = x_range.start,
-                                            end = x_range.end,
-                                            low = 0,
-                                            high = index.length-1,
-                                            mid = Math.round((low+high) / 2),
-                                            start_i = 0,
-                                            end_i = 0,
-                                            i = 0;
-                                        while (low < high && mid != high){
-                                            if (index[mid] < start){
-                                                low = mid;
-                                            }else if(index[mid] > start) {
-                                                high = mid;
-                                            }else{
-                                                break;
-                                            }
-                                            mid = Math.round((low+high) / 2);
-                                        };
-                                        start_i = high;
-                                        low = 0;
-                                        high = index.length-1;
-                                        mid = Math.round((low+high) / 2);
-                                        while (low < high && mid != high){
-                                            if (index[mid] < end){
-                                                low = mid;
-                                            }else if(index[mid] > end) {
-                                                high = mid;
-                                            }else{
-                                                break;
-                                            }
-                                            mid = Math.round((low+high) / 2);
-                                        };
-                                        end_i = high;
-                                        columns_name_list.forEach((name) => {
-                                            if (name != 'index'){
-                                                var val_list = cb_obj.data[name].slice(start_i,end_i+1);
-                                                val_list.forEach((val) => {
-                                                    if (val > max_val) {
-                                                        max_val = val;
-                                                    }
-                                                    if (val < min_val && val > 0.000000001) {
-                                                        min_val = val;
-                                                    }
-                                                });
-                                            }
-                                        });
-                                        var pad_val = (max_val - min_val) * 0.05;
-                                        if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
-                                        window._autoscale_timeout_1 = setTimeout(function() {
-                                            y_range.start = min_val - pad_val;
-                                            y_range.end = max_val + pad_val;        
-                                        },100);  
-                                        }
-                                      """)
-    # time_grav_ax.x_range.js_on_change('start', callback)
-    # time_grav_ax.x_range.js_on_change('end', callback)
-    # time_grav_dist_source.js_on_change('data', ds_change_callback)
 
 
 def update_time_grav_dist_mvol(indicator):
@@ -719,7 +613,6 @@ def update_time_grav_dist_mvol(indicator):
     allvol = np.sqrt(indicator['val']['allvol'])
     new_data = {'index': index, 'buyvol': buyvol, 'sellvol': sellvol, 'allvol': allvol}
     time_grav_dist_source.data = new_data
-    configure_time_grav_ax_yrange(new_data, is_mvol=True)
 
 
 def draw_time_grav_dist_lsd(indicator):
@@ -739,133 +632,9 @@ def draw_time_grav_dist_lsd(indicator):
                       color='violet', legend_label='all')
     time_grav_ax.legend.location = "top_left"
     configure_time_grav_ax_yrange(new_data, start=0)
-    callback = CustomJS(
-        args={'y_range': time_grav_ax.y_range, 'data_source': time_grav_dist_source},
-        code='''
-                var index = data_source.data['index'],
-                    columns_name_list = Object.keys(data_source.data),
-                    min_val = Infinity,
-                    max_val = -Infinity,
-                    start = cb_obj.start,
-                    end = cb_obj.end,
-                    low = 0,
-                    high = index.length-1,
-                    mid = Math.round((low+high) / 2),
-                    start_i = 0,
-                    end_i = 0,
-                    i = 0;
-                while (low < high && mid != high){
-                    if (index[mid] < start){
-                        low = mid;
-                    }else if(index[mid] > start) {
-                        high = mid;
-                    }else{
-                        break;
-                    }
-                    mid = Math.round((low+high) / 2);
-                };
-                start_i = high;
-                low = 0;
-                high = index.length-1;
-                mid = Math.round((low+high) / 2);
-                while (low < high && mid != high){
-                    if (index[mid] < end){
-                        low = mid;
-                    }else if(index[mid] > end) {
-                        high = mid;
-                    }else{
-                        break;
-                    }
-                    mid = Math.round((low+high) / 2);
-                };
-                end_i = high;
-                columns_name_list.forEach((name) => {
-                    if (name != 'index'){
-                        var val_list = data_source.data[name].slice(start_i,end_i+1);
-                        val_list.forEach((val) => {
-                            if (val > max_val) {
-                                max_val = val;
-                            }
-                            if (val < min_val && val > 0.000000001) {
-                                min_val = val;
-                            }
-                        });
-                    }
-                });
-                if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
-                var pad_val = (max_val - min_val) * 0.05;
-                y_range.start = min_val - pad_val;
-                y_range.end = max_val + pad_val;
-                }
-                ''')
-    ds_change_callback = CustomJS(args={'x_range': time_grav_ax.x_range, 'y_range': time_grav_ax.y_range},
-                                  code="""
-                                        clearTimeout(window._autoscale_timeout_lsd);
-                                            var index = cb_obj.data['index'],
-                                            columns_name_list = Object.keys(cb_obj.data),
-                                            min_val = Infinity,
-                                            max_val = -Infinity,
-                                            start = x_range.start,
-                                            end = x_range.end,
-                                            low = 0,
-                                            high = index.length-1,
-                                            mid = Math.round((low+high) / 2),
-                                            start_i = 0,
-                                            end_i = 0,
-                                            i = 0;
-                                        while (low < high && mid != high){
-                                            if (index[mid] < start){
-                                                low = mid;
-                                            }else if(index[mid] > start) {
-                                                high = mid;
-                                            }else{
-                                                break;
-                                            }
-                                            mid = Math.round((low+high) / 2);
-                                        };
-                                        start_i = high;
-                                        low = 0;
-                                        high = index.length-1;
-                                        mid = Math.round((low+high) / 2);
-                                        while (low < high && mid != high){
-                                            if (index[mid] < end){
-                                                low = mid;
-                                            }else if(index[mid] > end) {
-                                                high = mid;
-                                            }else{
-                                                break;
-                                            }
-                                            mid = Math.round((low+high) / 2);
-                                        };
-                                        end_i = high;
-                                        columns_name_list.forEach((name) => {
-                                            if (name != 'index'){
-                                                var val_list = cb_obj.data[name].slice(start_i,end_i+1);
-                                                val_list.forEach((val) => {
-                                                    if (val > max_val) {
-                                                        max_val = val;
-                                                    }
-                                                    if (val < min_val && val > 0.000000001) {
-                                                        min_val = val;
-                                                    }
-                                                });
-                                            }
-                                        });
-                                        var pad_val = (max_val - min_val) * 0.05;
-                                        if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
-                                        window._autoscale_timeout_lsd = setTimeout(function() {
-                                            y_range.start = min_val - pad_val;
-                                            y_range.end = max_val + pad_val;        
-                                        },100); 
-                                        } 
-                                      """)
-    # time_grav_ax.x_range.js_on_change('start', callback)
-    # time_grav_ax.x_range.js_on_change('end', callback)
-    # time_grav_dist_source.js_on_change('data', ds_change_callback)
 
 
 def x_range_start_changed_callback(attr, old, new):
-    print(main_ax.x_range.start, main_ax.x_range.end, new)
     indices = np.where((main_ax_line_source_dict[0].data['index'] >= main_ax.x_range.start) &
                        (main_ax_line_source_dict[0].data['index'] <= main_ax.x_range.end))
     if indices:
@@ -883,15 +652,6 @@ def x_range_start_changed_callback(attr, old, new):
             configure_time_grav_ax_yrange(time_grav_dist_source.data)
 
 
-def time_grav_ds_changed_callback(attr, old, new):
-    if indicator_select.value == "均线离散度":
-        configure_time_grav_ax_yrange(time_grav_dist_source.data, start=0)
-    elif "平均成交量" in indicator_select.value:
-        configure_time_grav_ax_yrange(time_grav_dist_source.data, is_mvol=True)
-    elif indicator_select.value in ('MTM', 'Trend'):
-        configure_time_grav_ax_yrange(time_grav_dist_source.data)
-
-
 def draw_time_grav_dist_mtm(indicator):
     global time_grav_ax, time_grav_dist_source
     time_grav_ax.yaxis.formatter = NumeralTickFormatter(format='0.000')
@@ -904,129 +664,6 @@ def draw_time_grav_dist_mtm(indicator):
                       color='violet', legend_label='long')
     time_grav_ax.legend.location = "top_left"
     configure_time_grav_ax_yrange(indicator['val'])
-    callback = CustomJS(
-        args={'y_range': time_grav_ax.y_range, 'data_source': time_grav_dist_source},
-        code='''
-                var index = data_source.data['index'],
-                    columns_name_list = Object.keys(data_source.data),
-                    min_val = Infinity,
-                    max_val = -Infinity,
-                    start = cb_obj.start,
-                    end = cb_obj.end,
-                    low = 0,
-                    high = index.length-1,
-                    mid = Math.round((low+high) / 2),
-                    start_i = 0,
-                    end_i = 0,
-                    i = 0;
-                while (low < high && mid != high){
-                    if (index[mid] < start){
-                        low = mid;
-                    }else if(index[mid] > start) {
-                        high = mid;
-                    }else{
-                        break;
-                    }
-                    mid = Math.round((low+high) / 2);
-                };
-                start_i = high;
-                low = 0;
-                high = index.length-1;
-                mid = Math.round((low+high) / 2);
-                while (low < high && mid != high){
-                    if (index[mid] < end){
-                        low = mid;
-                    }else if(index[mid] > end) {
-                        high = mid;
-                    }else{
-                        break;
-                    }
-                    mid = Math.round((low+high) / 2);
-                };
-                end_i = high;
-                columns_name_list.forEach((name) => {
-                    if (name != 'index'){
-                        var val_list = data_source.data[name].slice(start_i,end_i+1);
-                        val_list.forEach((val) => {
-                            if (val > max_val) {
-                                max_val = val;
-                            }
-                            if (val < min_val) {
-                                min_val = val;
-                            }
-                        });
-                    }
-                });
-                if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
-                var pad_val = (max_val - min_val) * 0.05;
-                y_range.start = min_val - pad_val;
-                y_range.end = max_val + pad_val;
-                }
-                ''')
-    ds_change_callback = CustomJS(args={'x_range': time_grav_ax.x_range, 'y_range': time_grav_ax.y_range},
-                                  code="""
-                                        clearTimeout(window._autoscale_timeout_lsd);
-                                            var index = cb_obj.data['index'],
-                                            columns_name_list = Object.keys(cb_obj.data),
-                                            min_val = Infinity,
-                                            max_val = -Infinity,
-                                            start = x_range.start,
-                                            end = x_range.end,
-                                            low = 0,
-                                            high = index.length-1,
-                                            mid = Math.round((low+high) / 2),
-                                            start_i = 0,
-                                            end_i = 0,
-                                            i = 0;
-                                        while (low < high && mid != high){
-                                            if (index[mid] < start){
-                                                low = mid;
-                                            }else if(index[mid] > start) {
-                                                high = mid;
-                                            }else{
-                                                break;
-                                            }
-                                            mid = Math.round((low+high) / 2);
-                                        };
-                                        start_i = high;
-                                        low = 0;
-                                        high = index.length-1;
-                                        mid = Math.round((low+high) / 2);
-                                        while (low < high && mid != high){
-                                            if (index[mid] < end){
-                                                low = mid;
-                                            }else if(index[mid] > end) {
-                                                high = mid;
-                                            }else{
-                                                break;
-                                            }
-                                            mid = Math.round((low+high) / 2);
-                                        };
-                                        end_i = high;
-                                        columns_name_list.forEach((name) => {
-                                            if (name != 'index'){
-                                                var val_list = cb_obj.data[name].slice(start_i,end_i+1);
-                                                val_list.forEach((val) => {
-                                                    if (val > max_val) {
-                                                        max_val = val;
-                                                    }
-                                                    if (val < min_val) {
-                                                        min_val = val;
-                                                    }
-                                                });
-                                            }
-                                        });
-                                        var pad_val = (max_val - min_val) * 0.05;
-                                        if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
-                                        window._autoscale_timeout_lsd = setTimeout(function() {
-                                            y_range.start = min_val - pad_val;
-                                            y_range.end = max_val + pad_val;        
-                                        },100);  
-                                        }
-                                      """)
-    # time_grav_ax.x_range.js_on_change('start', callback)
-    # time_grav_ax.x_range.js_on_change('end', callback)
-    # time_grav_dist_source.js_on_change('data', ds_change_callback)
 
 
 def draw_time_grav_dist_trend(indicator):
@@ -1040,129 +677,6 @@ def draw_time_grav_dist_trend(indicator):
 
     time_grav_ax.legend.location = "top_left"
     configure_time_grav_ax_yrange(indicator['val'])
-    callback = CustomJS(
-        args={'y_range': time_grav_ax.y_range, 'data_source': time_grav_dist_source},
-        code='''
-                var index = data_source.data['index'],
-                    columns_name_list = Object.keys(data_source.data),
-                    min_val = Infinity,
-                    max_val = -Infinity,
-                    start = cb_obj.start,
-                    end = cb_obj.end,
-                    low = 0,
-                    high = index.length-1,
-                    mid = Math.round((low+high) / 2),
-                    start_i = 0,
-                    end_i = 0,
-                    i = 0;
-                while (low < high && mid != high){
-                    if (index[mid] < start){
-                        low = mid;
-                    }else if(index[mid] > start) {
-                        high = mid;
-                    }else{
-                        break;
-                    }
-                    mid = Math.round((low+high) / 2);
-                };
-                start_i = high;
-                low = 0;
-                high = index.length-1;
-                mid = Math.round((low+high) / 2);
-                while (low < high && mid != high){
-                    if (index[mid] < end){
-                        low = mid;
-                    }else if(index[mid] > end) {
-                        high = mid;
-                    }else{
-                        break;
-                    }
-                    mid = Math.round((low+high) / 2);
-                };
-                end_i = high;
-                columns_name_list.forEach((name) => {
-                    if (name != 'index'){
-                        var val_list = data_source.data[name].slice(start_i,end_i+1);
-                        val_list.forEach((val) => {
-                            if (val > max_val) {
-                                max_val = val;
-                            }
-                            if (val < min_val) {
-                                min_val = val;
-                            }
-                        });
-                    }
-                });
-                if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
-                var pad_val = (max_val - min_val) * 0.05;
-                y_range.start = min_val - pad_val;
-                y_range.end = max_val + pad_val;
-                }
-                ''')
-    ds_change_callback = CustomJS(args={'x_range': time_grav_ax.x_range, 'y_range': time_grav_ax.y_range},
-                                  code="""
-                                        clearTimeout(window._autoscale_timeout_lsd);
-                                            var index = cb_obj.data['index'],
-                                            columns_name_list = Object.keys(cb_obj.data),
-                                            min_val = Infinity,
-                                            max_val = -Infinity,
-                                            start = x_range.start,
-                                            end = x_range.end,
-                                            low = 0,
-                                            high = index.length-1,
-                                            mid = Math.round((low+high) / 2),
-                                            start_i = 0,
-                                            end_i = 0,
-                                            i = 0;
-                                        while (low < high && mid != high){
-                                            if (index[mid] < start){
-                                                low = mid;
-                                            }else if(index[mid] > start) {
-                                                high = mid;
-                                            }else{
-                                                break;
-                                            }
-                                            mid = Math.round((low+high) / 2);
-                                        };
-                                        start_i = high;
-                                        low = 0;
-                                        high = index.length-1;
-                                        mid = Math.round((low+high) / 2);
-                                        while (low < high && mid != high){
-                                            if (index[mid] < end){
-                                                low = mid;
-                                            }else if(index[mid] > end) {
-                                                high = mid;
-                                            }else{
-                                                break;
-                                            }
-                                            mid = Math.round((low+high) / 2);
-                                        };
-                                        end_i = high;
-                                        columns_name_list.forEach((name) => {
-                                            if (name != 'index'){
-                                                var val_list = cb_obj.data[name].slice(start_i,end_i+1);
-                                                val_list.forEach((val) => {
-                                                    if (val > max_val) {
-                                                        max_val = val;
-                                                    }
-                                                    if (val < min_val) {
-                                                        min_val = val;
-                                                    }
-                                                });
-                                            }
-                                        });
-                                        var pad_val = (max_val - min_val) * 0.05;
-                                        if ((min_val != Infinity) && (max_val != -Infinity) && (min_val != max_val)){
-                                        window._autoscale_timeout_lsd = setTimeout(function() {
-                                            y_range.start = min_val - pad_val;
-                                            y_range.end = max_val + pad_val;        
-                                        },100);  
-                                        }
-                                      """)
-    # time_grav_ax.x_range.js_on_change('start', callback)
-    # time_grav_ax.x_range.js_on_change('end', callback)
-    # time_grav_dist_source.js_on_change('data', ds_change_callback)
 
 
 def update_time_grav_dist_lsd(indicator):
@@ -1195,22 +709,16 @@ def draw_time_grav_dist():
 def indicator_select_callback(_, old, new):
     global ana_result, time_grav_ax
     indicators_list = ana_result.indicators
+    create_time_grav_ax()
     for indicator in indicators_list:
         if indicator['name'] == new:
             if "平均成交量" in indicator['name']:
-                if "平均成交量" in old:
-                    update_time_grav_dist_mvol(indicator)
-                else:
-                    create_time_grav_ax()
-                    draw_time_grav_dist_mvol(indicator)
+                draw_time_grav_dist_mvol(indicator)
             elif indicator['name'] == "均线离散度":
-                create_time_grav_ax()
                 draw_time_grav_dist_lsd(indicator)
             elif indicator['name'] == 'MTM':
-                create_time_grav_ax()
                 draw_time_grav_dist_mtm(indicator)
             elif indicator['name'] == 'Trend':
-                create_time_grav_ax()
                 draw_time_grav_dist_trend(indicator)
             break
     layout.children[2] = (time_grav_ax, 1, 0)
@@ -1330,7 +838,7 @@ def create_tool_ax():
                               options=[item['name'] for item in ana_result.indicators],
                               height=50, width=190)
     tool_ax = column(indicator_select, space_grav_calc_mode,
-                     row(code_input, refresh_button),
+                     row(code_input, refresh_button, save_button),
                      row(message_show, auto_refresh_checkbox))
 
 
@@ -1345,7 +853,17 @@ def configure_tools():
                                             message_show.text = "状态:正在分析";
                                         """))
     refresh_button.on_click(update)
+    save_button.on_click(save_drawing)
     auto_refresh_checkbox.on_change('active', auto_refresh_callback)
+
+
+def save_drawing():
+    res_dict = dict()
+    res_dict['code'] = code.code
+    res_dict['data'] = {'save_time': {'index': int(ana_result.last_index),
+                                      'time': TimeTool.time_to_str(ana_result.last_time)},
+                        'line_data': dict(multi_line_source.data)}
+    Draw.store_drawing(res_dict)
 
 
 def refresh_button_callback():
