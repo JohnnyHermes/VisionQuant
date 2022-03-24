@@ -17,7 +17,6 @@ from VisionQuant.DataCenter.DataFetch import DEFAULT_ASHARE_DATA_SOURCE
 from VisionQuant.Analysis.Relativity.Relativity import Relativity
 from VisionQuant.Analysis.Relativity import relativity_cy
 
-
 curdoc().theme = 'dark_minimal'
 MAIN_WEIGHT = 1700
 MAIN_HEIGHT = 750
@@ -170,6 +169,7 @@ def create_main_ax():
     main_ax.js_on_event(events.MouseLeave, MouseLeaveCallback)
     main_ax.js_on_event(events.MouseEnter, MouseEnterCallback)
     main_ax.js_on_event(events.MouseWheel, MouseWheelCallback)
+    main_ax.x_range.on_change('start', x_range_start_changed_callback)
 
 
 def draw_main_ax(x_range=None):
@@ -424,7 +424,7 @@ def draw_main_ax(x_range=None):
                                 });
                                 }
                                   """)
-    main_ax.x_range.js_on_change('start', MainAxisAutozoomCallback_start)
+    # main_ax.x_range.js_on_change('start', MainAxisAutozoomCallback_start)
     main_ax.x_range.js_on_change('end', MainAxisAutozoomCallback_end)
     main_ax.y_range.js_on_change('start', y_range_change_callback_start)
     main_ax.y_range.js_on_change('end', y_range_change_callback_end)
@@ -533,39 +533,41 @@ def create_time_grav_ax():
     time_grav_ax.yaxis.major_label_standoff = 0
     time_grav_ax.min_border_right = 50
     time_grav_dist_source = ColumnDataSource()
+    time_grav_dist_source.on_change('data', time_grav_ds_changed_callback)
 
 
 def configure_time_grav_ax_yrange(data_dict, start=None, end=None, is_mvol=False):
     global time_grav_ax
     indices = np.where((data_dict['index'] >= main_ax.x_range.start) &
                        (data_dict['index'] <= main_ax.x_range.end))
-    max_val = None
-    min_val = None
-    for key, data in data_dict.items():
-        if key != 'index':
-            tmp_data = data[indices]
-            tmp_max_val = np.max(tmp_data)
-            if is_mvol:
-                tmp_min_val = np.min(tmp_data[np.where(tmp_data > 1e-6)])
-            else:
-                tmp_min_val = np.min(tmp_data)
-            if max_val is None:
-                max_val = tmp_max_val
-            elif tmp_max_val > max_val:
-                max_val = tmp_max_val
-            if min_val is None:
-                min_val = tmp_min_val
-            elif tmp_min_val < min_val:
-                min_val = tmp_min_val
-    pad_val = (max_val - min_val) * 0.05
-    if start is not None:
-        time_grav_ax.y_range.start = start
-    else:
-        time_grav_ax.y_range.start = min_val - pad_val
-    if end is not None:
-        time_grav_ax.y_range.end = end
-    else:
-        time_grav_ax.y_range.end = max_val + pad_val
+    if indices:
+        max_val = None
+        min_val = None
+        for key, data in data_dict.items():
+            if key != 'index':
+                tmp_data = data[indices]
+                tmp_max_val = np.max(tmp_data)
+                if is_mvol:
+                    tmp_min_val = np.min(tmp_data[np.where(tmp_data > 1e-6)])
+                else:
+                    tmp_min_val = np.min(tmp_data)
+                if max_val is None:
+                    max_val = tmp_max_val
+                elif tmp_max_val > max_val:
+                    max_val = tmp_max_val
+                if min_val is None:
+                    min_val = tmp_min_val
+                elif tmp_min_val < min_val:
+                    min_val = tmp_min_val
+        pad_val = (max_val - min_val) * 0.05
+        if start is not None:
+            time_grav_ax.y_range.start = start
+        else:
+            time_grav_ax.y_range.start = min_val - pad_val
+        if end is not None:
+            time_grav_ax.y_range.end = end
+        else:
+            time_grav_ax.y_range.end = max_val + pad_val
 
 
 def draw_time_grav_dist_mvol(indicator):
@@ -704,9 +706,9 @@ def draw_time_grav_dist_mvol(indicator):
                                         },100);  
                                         }
                                       """)
-    time_grav_ax.x_range.js_on_change('start', callback)
-    time_grav_ax.x_range.js_on_change('end', callback)
-    time_grav_dist_source.js_on_change('data', ds_change_callback)
+    # time_grav_ax.x_range.js_on_change('start', callback)
+    # time_grav_ax.x_range.js_on_change('end', callback)
+    # time_grav_dist_source.js_on_change('data', ds_change_callback)
 
 
 def update_time_grav_dist_mvol(indicator):
@@ -717,6 +719,7 @@ def update_time_grav_dist_mvol(indicator):
     allvol = np.sqrt(indicator['val']['allvol'])
     new_data = {'index': index, 'buyvol': buyvol, 'sellvol': sellvol, 'allvol': allvol}
     time_grav_dist_source.data = new_data
+    configure_time_grav_ax_yrange(new_data, is_mvol=True)
 
 
 def draw_time_grav_dist_lsd(indicator):
@@ -856,9 +859,37 @@ def draw_time_grav_dist_lsd(indicator):
                                         },100); 
                                         } 
                                       """)
-    time_grav_ax.x_range.js_on_change('start', callback)
-    time_grav_ax.x_range.js_on_change('end', callback)
-    time_grav_dist_source.js_on_change('data', ds_change_callback)
+    # time_grav_ax.x_range.js_on_change('start', callback)
+    # time_grav_ax.x_range.js_on_change('end', callback)
+    # time_grav_dist_source.js_on_change('data', ds_change_callback)
+
+
+def x_range_start_changed_callback(attr, old, new):
+    print(main_ax.x_range.start, main_ax.x_range.end, new)
+    indices = np.where((main_ax_line_source_dict[0].data['index'] >= main_ax.x_range.start) &
+                       (main_ax_line_source_dict[0].data['index'] <= main_ax.x_range.end))
+    if indices:
+        pricelist = main_ax_line_source_dict[0].data['price'][indices]
+        max_price = np.max(pricelist)
+        min_price = np.min(pricelist)
+        pad_price = (max_price - min_price) * 0.05
+        main_ax.y_range.end = round(max_price + pad_price, decimal_num)
+        main_ax.y_range.start = round(min_price - pad_price, decimal_num)
+        if indicator_select.value == "均线离散度":
+            configure_time_grav_ax_yrange(time_grav_dist_source.data, start=0)
+        elif "平均成交量" in indicator_select.value:
+            configure_time_grav_ax_yrange(time_grav_dist_source.data, is_mvol=True)
+        elif indicator_select.value in ('MTM', 'Trend'):
+            configure_time_grav_ax_yrange(time_grav_dist_source.data)
+
+
+def time_grav_ds_changed_callback(attr, old, new):
+    if indicator_select.value == "均线离散度":
+        configure_time_grav_ax_yrange(time_grav_dist_source.data, start=0)
+    elif "平均成交量" in indicator_select.value:
+        configure_time_grav_ax_yrange(time_grav_dist_source.data, is_mvol=True)
+    elif indicator_select.value in ('MTM', 'Trend'):
+        configure_time_grav_ax_yrange(time_grav_dist_source.data)
 
 
 def draw_time_grav_dist_mtm(indicator):
@@ -993,9 +1024,9 @@ def draw_time_grav_dist_mtm(indicator):
                                         },100);  
                                         }
                                       """)
-    time_grav_ax.x_range.js_on_change('start', callback)
-    time_grav_ax.x_range.js_on_change('end', callback)
-    time_grav_dist_source.js_on_change('data', ds_change_callback)
+    # time_grav_ax.x_range.js_on_change('start', callback)
+    # time_grav_ax.x_range.js_on_change('end', callback)
+    # time_grav_dist_source.js_on_change('data', ds_change_callback)
 
 
 def draw_time_grav_dist_trend(indicator):
@@ -1129,9 +1160,9 @@ def draw_time_grav_dist_trend(indicator):
                                         },100);  
                                         }
                                       """)
-    time_grav_ax.x_range.js_on_change('start', callback)
-    time_grav_ax.x_range.js_on_change('end', callback)
-    time_grav_dist_source.js_on_change('data', ds_change_callback)
+    # time_grav_ax.x_range.js_on_change('start', callback)
+    # time_grav_ax.x_range.js_on_change('end', callback)
+    # time_grav_dist_source.js_on_change('data', ds_change_callback)
 
 
 def update_time_grav_dist_lsd(indicator):
@@ -1336,7 +1367,7 @@ def update(from_auto_refresh=False):
     else:
         new_code = code.code
     end_time = TimeTool.get_now_time('datetime')
-    start_time = TimeTool.get_start_time(end_time, days=365+365)
+    start_time = TimeTool.get_start_time(end_time, days=365 + 365)
     try:
         code = Code(new_code, '5', start_time, end_time=end_time,
                     data_source=DEFAULT_ASHARE_DATA_SOURCE)
@@ -1417,7 +1448,7 @@ def get_chart():
 
 
 end_time = TimeTool.get_now_time(return_type='datetime')
-start_time = TimeTool.get_start_time(end_time, days=365+365)
+start_time = TimeTool.get_start_time(end_time, days=365 + 365)
 code = Code('999999', '5', start_time, end_time=end_time,
             data_source=DEFAULT_ASHARE_DATA_SOURCE)
 
@@ -1435,4 +1466,3 @@ configure_tools()
 get_chart()
 curdoc().add_root(layout)
 curdoc().title = "Analyze - 999999"
-
