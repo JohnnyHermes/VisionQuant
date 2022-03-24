@@ -179,7 +179,7 @@ class AshareDataUpdate(DataUpdateBase):
 
     def _update_blocks_score_data(self):
         def analyze_single_date(_date):
-            new_data_df = data_df[data_df['time'] == _date]
+            new_data_df = data_df[data_df['time'] == _date].reset_index(drop=True)
             tmp_score_data = np.array(new_data_df['score'])
             count_data = np.zeros(len(tmp_score_data), dtype=int)
             for i in range(RELATIVITY_MAX_LEVEL):

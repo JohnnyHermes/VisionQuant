@@ -1,28 +1,14 @@
 import numpy as np
 import pandas as pd
+from bokeh.models import FixedTicker
+from bokeh.io import curdoc, export
 
-from bokeh.layouts import column, row
-from bokeh.models import ColumnDataSource, CustomJS, DataRange1d, RadioButtonGroup, TableColumn, \
-    DataTable, Span, Button, Label, Select, TextInput, NumeralTickFormatter, WheelZoomTool, ResetTool, \
-    PanTool, CheckboxGroup, Paragraph, Title, DatePicker, RadioGroup, BoxAnnotation, FixedTicker
-from bokeh.io import curdoc
-from bokeh.models import HoverTool, CrosshairTool
-# 导入颜色模块
-# 在notebook中创建绘图空间
-from bokeh.palettes import Set2_8, RdYlGn8
-from bokeh.plotting import figure
-from bokeh import events
-import bokeh
-
-from VisionQuant.DataCenter.CodePool import AshareCodePool
-from VisionQuant.utils import TimeTool
 from VisionQuant.DataCenter.DataFetch import DataSource
-from VisionQuant.Analysis.Relativity.Relativity import Relativity
 from VisionQuant.utils.Params import Market
 
 analyze_data_source = DataSource.Local.VQapi
 
-from bokeh.models import BasicTicker, ColorBar, LinearColorMapper, PrintfTickFormatter
+from bokeh.models import ColorBar, LinearColorMapper
 from bokeh.plotting import figure, show
 
 UNIT_WIDTH = 60
@@ -58,28 +44,31 @@ colors = ['#3f7f3e', '#4f8e4f', '#4f8e4f', '#75ad75', '#8bbc8b', '#a3cca3', '#bc
 mapper = LinearColorMapper(palette=colors, low=0, high=128)
 TOOLS = "save,reset"
 
-p = figure(title="A股市场行业宽度图 {}".format(last_time),
+p = figure(title="A股市场全行业热图 {}".format(last_time),
            x_range=x_range, y_range=y_range,
            plot_height=MAP_HEIGHT, plot_width=MAP_WIDTH + 50,
            x_axis_location="above",
            y_axis_location='right',
            tools=TOOLS, toolbar_location='above')
-p.title.text_font_size = '30px'
+p.title.text_font_size = '60px'
 p.title.align = 'center'
-p.yaxis.axis_label_text_font_style = "bold"
-p.xaxis.axis_label_text_font_style = "bold"
+p.yaxis.major_label_text_font_style = "bold"
 p.grid.grid_line_color = None
 p.axis.axis_line_color = None
 p.axis.major_tick_line_color = \
     None
-p.axis.major_label_text_font_size = "24px"
+p.xaxis.major_label_text_font_size = "24px"
+p.yaxis.major_label_text_font_size = "28px"
 p.axis.major_label_standoff = 0
-p.xaxis.major_label_orientation = 3.1415926 / 3
+p.xaxis.major_label_orientation = 3.1415926 / 4
 
 p.rect(x="time", y="name", width=1, height=1,
        source=data,
        fill_color={'field': 'score', 'transform': mapper},
        line_color=None)
+
+p.rect(x='time', y='name', source=data.loc[lambda df: df['name'] == '0沪深京A股'],
+       width=1, height=1, line_color=None, fill_color='yellow', fill_alpha=0.1)
 
 # 将score 转换为整数
 data['score_show'] = np.round(data['score'])
@@ -92,4 +81,4 @@ color_bar = ColorBar(color_mapper=mapper, major_label_text_font_size="24px",
 p.add_layout(color_bar, 'left')
 
 curdoc().add_root(p)
-curdoc().title = "A股市场行业宽度图 {}".format(last_time)
+curdoc().title = "A股市场全行业热图 {}".format(last_time)

@@ -24,7 +24,7 @@ MAIN_HEIGHT = 750
 line_colorlist = [Set2_8[i] for i in (7, 2, 1, 0, 3, 4, 5)]
 default_indicator_name = '均线离散度'
 time_count = 0
-auto_fresh_period = 15  # 单位：秒
+auto_fresh_period = 6  # 单位：秒
 period_callback_id = None
 
 code: Code
@@ -506,7 +506,7 @@ def update_main_ax():
                 peak_pricelabel.background_fill_color = 'red'
                 peak_span.line_color = 'red'
             main_ax_peak_pricelabel_list.append(peak_pricelabel)
-            main_ax_peak_span_list.append(peak_pricelabel)
+            main_ax_peak_span_list.append(peak_span)
             main_ax.add_layout(peak_pricelabel)
             main_ax.add_layout(peak_span)
         i += 1
@@ -1253,6 +1253,7 @@ def update_space_grav_dist():
 
 def update_space_grav_dist_normal(event):
     if space_grav_calc_mode.active == 1:
+        base_points.data_source.selected.indices = []
         tmp_end_index = event.x
         if tmp_end_index <= 1:
             tmp_end_index = 1
@@ -1280,6 +1281,7 @@ def update_space_grav_dist_sum(attr, old, new):
 
 
 def update_space_grave_dist_none():
+    base_points.data_source.selected.indices = []
     new_grav_dist = calc_space_grav_dist(ana_result.last_index)
     space_grav_ax_hbar.data_source.data = new_grav_dist
     space_grav_ax_line.data_source.data = new_grav_dist
@@ -1334,7 +1336,7 @@ def update(from_auto_refresh=False):
     else:
         new_code = code.code
     end_time = TimeTool.get_now_time('datetime')
-    start_time = TimeTool.get_start_time(end_time, days=365+180)
+    start_time = TimeTool.get_start_time(end_time, days=365+365)
     try:
         code = Code(new_code, '5', start_time, end_time=end_time,
                     data_source=DEFAULT_ASHARE_DATA_SOURCE)
@@ -1373,6 +1375,7 @@ def update(from_auto_refresh=False):
                 layout.children[0] = (main_ax, 0, 0)
                 layout.children[1] = (space_grav_ax, 0, 1)
                 layout.children[2] = (time_grav_ax, 1, 0)
+                curdoc().title = "Analyze - {}".format(code.code)
             else:
                 update_main_ax()
                 update_time_grav_dist()
@@ -1414,7 +1417,7 @@ def get_chart():
 
 
 end_time = TimeTool.get_now_time(return_type='datetime')
-start_time = TimeTool.get_start_time(end_time, days=365+180)
+start_time = TimeTool.get_start_time(end_time, days=365+365)
 code = Code('999999', '5', start_time, end_time=end_time,
             data_source=DEFAULT_ASHARE_DATA_SOURCE)
 
@@ -1431,5 +1434,5 @@ configure_tools()
 
 get_chart()
 curdoc().add_root(layout)
-curdoc().title = "Analyze"
+curdoc().title = "Analyze - 999999"
 

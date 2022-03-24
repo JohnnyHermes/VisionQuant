@@ -671,6 +671,8 @@ score_ax_show_class_select_model = RadioGroup(labels=['得分', '上升类别数
 score_ax_show_class_select_model.on_click(show_class_select_callback)
 score_ax_show_class_select = row(score_ax_show_class_select_text, score_ax_show_class_select_model)
 
+checkbox = CheckboxGroup(labels=['自动刷新'], height=15, width=60)
+
 columns_blocks = [
     TableColumn(field="time", title="日期"),
     TableColumn(field="name", title="板块名称"),
