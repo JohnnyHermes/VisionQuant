@@ -1,3 +1,5 @@
+import copy
+
 import bokeh.plotting
 import numpy as np
 
@@ -105,7 +107,7 @@ def get_analyze_data(_code):
     if strategy_obj.analyze_flag:
         ana_result = strategy_obj
         # 获取过去保存的画笔
-        drawing_data = Draw.get_drawing(_code.code)
+        drawing_data = copy.deepcopy(Draw.get_drawing(_code.code))
         if drawing_data:
             time_series = [TimeTool.time_to_str(t) for t in ana_result.kdata.data['time']]
             try:
@@ -285,64 +287,6 @@ def draw_main_ax(x_range=None):
     main_ax.add_layout(main_ax_last_price_label)
     main_ax.add_layout(main_ax_last_price_line)
 
-    MainAxisAutozoomCallback_start = CustomJS(
-        args={'y_range': main_ax.y_range, 'data_source': main_ax_line_source_dict[0]},
-        code='''
-            clearTimeout(window._autoscale_timeout);
-            var index = data_source.data['index'],
-                price = data_source.data['price'],
-                min_price = Infinity,
-                max_price = -Infinity,
-                start = cb_obj.start,
-                end = cb_obj.end,
-                low = 0,
-                high = index.length-1,
-                mid = Math.round((low+high) / 2),
-                start_i = 0,
-                end_i = 0,
-                i = 0;
-            while (low < high && mid != high){
-                if (index[mid] < start){
-                    low = mid;
-                }else if(index[mid] > start) {
-                    high = mid;
-                }else{
-                    break;
-                }
-                mid = Math.round((low+high) / 2);
-            };
-            start_i = high;
-            low = 0;
-            high = index.length-1;
-            mid = Math.round((low+high) / 2);
-            while (low < high && mid != high){
-                if (index[mid] < end){
-                    low = mid;
-                }else if(index[mid] > end) {
-                    high = mid;
-                }else{
-                    break;
-                }
-                mid = Math.round((low+high) / 2);
-            };
-            end_i = high;
-            var new_price_list = price.slice(start_i,end_i+1);
-            new_price_list.forEach((price) => {
-                if (price > max_price) {
-                    max_price = price;
-                }
-                if (price < min_price) {
-                    min_price = price;
-                }
-            });
-            var pad_price = (max_price - min_price) * 0.05;
-            if ((min_price != Infinity) && (max_price != -Infinity) && (min_price != max_price)){
-            window._autoscale_timeout = setTimeout(function() {
-                y_range.start = min_price - pad_price;
-                y_range.end = max_price + pad_price;
-            });
-            }
-            ''')
     MainAxisAutozoomCallback_end = CustomJS(
         args={'label_list': main_ax_peak_pricelabel_list, 'last_price_label': main_ax_last_price_label,
               'label': pricelabel},
@@ -613,6 +557,7 @@ def update_time_grav_dist_mvol(indicator):
     allvol = np.sqrt(indicator['val']['allvol'])
     new_data = {'index': index, 'buyvol': buyvol, 'sellvol': sellvol, 'allvol': allvol}
     time_grav_dist_source.data = new_data
+    configure_time_grav_ax_yrange(time_grav_dist_source.data, is_mvol=True)
 
 
 def draw_time_grav_dist_lsd(indicator):
@@ -631,7 +576,7 @@ def draw_time_grav_dist_lsd(indicator):
     time_grav_ax.line(x='index', y='all', source=time_grav_dist_source,
                       color='violet', legend_label='all')
     time_grav_ax.legend.location = "top_left"
-    configure_time_grav_ax_yrange(new_data, start=0)
+    configure_time_grav_ax_yrange(time_grav_dist_source.data, start=0)
 
 
 def x_range_start_changed_callback(attr, old, new):
@@ -687,16 +632,19 @@ def update_time_grav_dist_lsd(indicator):
     all_lisandu = indicator['val']['all'] * 100
     new_data = {'index': index, 'short': short, 'long': long, 'all': all_lisandu}
     time_grav_dist_source.data = new_data
+    configure_time_grav_ax_yrange(time_grav_dist_source.data, start=0)
 
 
 def update_time_grav_dist_mtm(indicator):
     global time_grav_dist_source
     time_grav_dist_source.data = indicator['val']
+    configure_time_grav_ax_yrange(time_grav_dist_source.data)
 
 
 def update_time_grav_dist_trend(indicator):
     global time_grav_dist_source
     time_grav_dist_source.data = indicator['val']
+    configure_time_grav_ax_yrange(time_grav_dist_source.data)
 
 
 def draw_time_grav_dist():

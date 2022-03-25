@@ -30,6 +30,7 @@ class DataServer:
             for code in codes:
                 tmp_code = code.copy()  # 拷贝一个副本，修改时间为最新，直接获取到最近时刻的数据，再fliter
                 tmp_code.end_time = TimeTool.get_now_time()
+                code_key = code.code + str(code.market)
                 if isinstance(code, Code):
                     raise TypeError("Wrong code type")
                 else:
@@ -56,19 +57,19 @@ class DataServer:
                                                                               'high', 'low', 'volume', 'amount'])
                         else:
                             data_dict[code.frequency] = fetch_data
-                    self.data_dict[code.code] = AShare(code, data_dict)  # todo: 根据品种代码支持多品种
+                    self.data_dict[code_key] = AShare(code, data_dict)  # todo: 根据品种代码支持多品种
                     if self.force_live or TimeTool.is_trade_time(code.market):
                         self.update_data(code)
-                        kdata_list.append(self.data_dict[code.code].fliter(key='time',
-                                                                           start=code.start_time,
-                                                                           end=TimeTool.replace_time(codes.end_time,
-                                                                                                     hour=23,
-                                                                                                     minute=59,
-                                                                                                     second=59)))
+                        kdata_list.append(self.data_dict[code_key].fliter(key='time',
+                                                                          start=code.start_time,
+                                                                          end=TimeTool.replace_time(codes.end_time,
+                                                                                                    hour=23,
+                                                                                                    minute=59,
+                                                                                                    second=59)))
                     else:
-                        kdata_list.append(self.data_dict[code.code].fliter(key='time',
-                                                                           start=code.start_time,
-                                                                           end=code.end_time))
+                        kdata_list.append(self.data_dict[code_key].fliter(key='time',
+                                                                          start=code.start_time,
+                                                                          end=code.end_time))
             return kdata_list
         elif isinstance(codes, Code):
             if len(self.data_dict) + 1 > self.max_count:
@@ -76,6 +77,7 @@ class DataServer:
             data_dict = dict()
             tmp_code = codes.copy()  # 拷贝一个副本，修改时间为最新，直接获取到最近时刻的数据，再fliter
             tmp_code.end_time = TimeTool.get_now_time()
+            code_key = codes.code + str(codes.market)
             if isinstance(codes.frequency, list):
                 for freq in codes.frequency:
                     tmp_code.frequency = freq
@@ -98,16 +100,16 @@ class DataServer:
                                                                        'high', 'low', 'volume', 'amount'])
                 else:
                     data_dict[codes.frequency] = fetch_data
-            self.data_dict[codes.code] = AShare(codes, data_dict)  # todo: 根据品种代码支持多品种
+            self.data_dict[code_key] = AShare(codes, data_dict)  # todo: 根据品种代码支持多品种
             if self.force_live or TimeTool.is_trade_time(codes.market):
                 self.update_data(codes)
-                return self.data_dict[codes.code].fliter(key='time', start=codes.start_time,
+                return self.data_dict[code_key].fliter(key='time', start=codes.start_time,
                                                          end=TimeTool.replace_time(codes.end_time,
                                                                                    hour=23,
                                                                                    minute=59,
                                                                                    second=59))
             else:
-                return self.data_dict[codes.code].fliter(key='time', start=codes.start_time, end=codes.end_time)
+                return self.data_dict[code_key].fliter(key='time', start=codes.start_time, end=codes.end_time)
         else:
             raise ValueError
 
@@ -117,15 +119,17 @@ class DataServer:
         else:
             if isinstance(codes, list):
                 for code in codes:
+                    code_key = code.code + str(code.market)
                     if isinstance(code, Code):
                         raise TypeError("Wrong code type")
-                    if code.code in self.data_dict.keys():
-                        del self.data_dict[code.code]
+                    if code_key in self.data_dict.keys():
+                        del self.data_dict[code_key]
                     else:
                         continue
             elif isinstance(codes, Code):
-                if codes.code in self.data_dict.keys():
-                    del self.data_dict[codes.code]
+                code_key = codes.code + str(codes.market)
+                if code_key in self.data_dict.keys():
+                    del self.data_dict[code_key]
                 else:
                     pass
             else:
@@ -140,9 +144,10 @@ class DataServer:
             return_data = dict()
             for code in codes:
                 print("send kdata: {} start_time:{} end_time:{}".format(code.code, code.start_time, code.end_time))
+                code_key = code.code + str(code.market)
                 if isinstance(code, Code):
                     raise TypeError("Wrong code type")
-                if code.code in self.data_dict.keys():
+                if code_key in self.data_dict.keys():
                     if self.force_live or TimeTool.is_trade_time(code.market):
                         return_data[code.code] = self.update_data(code).fliter(key='time', start=code.start_time,
                                                                                end=TimeTool.replace_time(code.end_time,
@@ -154,17 +159,19 @@ class DataServer:
                             freq = code.frequency
                         else:
                             freq = code.frequency[0]
-                        if self.data_dict[code.code].get_kdata(freq).get_start_time() > code.start_time:
+                        if self.data_dict[code_key].get_kdata(freq).get_start_time() > code.start_time:
                             self.repair_data(code)
-                        tmp_datastruct = self.data_dict[code.code].fliter(key='time',
-                                                                          start=code.start_time, end=code.end_time)
+                        tmp_datastruct = self.data_dict[code_key].fliter(key='time',
+                                                                         start=code.start_time,
+                                                                         end=code.end_time)
                         return_data[code.code] = tmp_datastruct
                 else:
                     return_data[code.code] = self.add_data(code)
             return return_data
         elif isinstance(codes, Code):
             print("send kdata: {} start_time:{} end_time:{}".format(codes.code, codes.start_time, codes.end_time))
-            if codes.code in self.data_dict.keys():
+            code_key = codes.code + str(codes.market)
+            if code_key in self.data_dict.keys():
                 if self.force_live or TimeTool.is_trade_time(codes.market):
                     tmp_datastruct = self.update_data(codes).fliter(key='time', start=codes.start_time,
                                                                     end=TimeTool.replace_time(codes.end_time,
@@ -177,9 +184,9 @@ class DataServer:
                         freq = codes.frequency
                     else:
                         freq = codes.frequency[0]
-                    if self.data_dict[codes.code].get_kdata(freq).get_start_time() > codes.start_time:
+                    if self.data_dict[code_key].get_kdata(freq).get_start_time() > codes.start_time:
                         self.repair_data(codes)
-                    tmp_datastruct = self.data_dict[codes.code].fliter(key='time',
+                    tmp_datastruct = self.data_dict[code_key].fliter(key='time',
                                                                        start=codes.start_time, end=codes.end_time)
                     return tmp_datastruct
             else:
@@ -189,10 +196,11 @@ class DataServer:
 
     def update_data(self, code):
         now_time = TimeTool.get_now_time(return_type='datetime')
-        if not isinstance(code.frequency, list) and len(self.data_dict[code.code].get_kdata(code.frequency).data) > 0:
-            delta_time = code.end_time - self.data_dict[code.code].get_kdata(code.frequency).get_last_time()
+        code_key = code.code + str(code.market)
+        if not isinstance(code.frequency, list) and len(self.data_dict[code_key].get_kdata(code.frequency).data) > 0:
+            delta_time = code.end_time - self.data_dict[code_key].get_kdata(code.frequency).get_last_time()
             if delta_time < - 14400 * 10 ** 9:  # 相差超过4个小时
-                return self.data_dict[code.code]
+                return self.data_dict[code_key]
         if now_time - self.last_update_time > datetime.timedelta(seconds=120):
             if self.sk_client_mng.find(code.data_source_live):
                 self.sk_client_mng.close_socket(code.data_source_live)
@@ -206,27 +214,28 @@ class DataServer:
             for freq in code.frequency:
                 tmp_code.frequency = freq
                 fetch_data = code.data_source_live.fetch_kdata(socket_client, tmp_code)
-                self.data_dict[code.code].get_kdata(freq).update(fetch_data)
+                self.data_dict[code_key].get_kdata(freq).update(fetch_data)
         else:
             fetch_data = code.data_source_live.fetch_kdata(socket_client, tmp_code)
-            self.data_dict[code.code].get_kdata(code.frequency).update(fetch_data)
+            self.data_dict[code_key].get_kdata(code.frequency).update(fetch_data)
         self.last_update_time = TimeTool.get_now_time(return_type='datetime')
-        return self.data_dict[code.code]
+        return self.data_dict[code_key]
 
     def repair_data(self, code):
         tmp_code = code.copy()
         tmp_code.start_time = TimeTool.get_start_time(tmp_code.start_time, days=7)
         tmp_code.end_time = TimeTool.time_plus(tmp_code.start_time, days=7)
+        code_key = code.code + str(code.market)
         socket_client = self.sk_client_mng.init_socket(code.data_source_local)
         if isinstance(code.frequency, list):
             for freq in code.frequency:
                 tmp_code.frequency = freq
                 fetch_data = code.data_source_local.fetch_kdata(socket_client, tmp_code)
-                self.data_dict[code.code].get_kdata(freq).repair(fetch_data)
+                self.data_dict[code_key].get_kdata(freq).repair(fetch_data)
         else:
             fetch_data = code.data_source_local.fetch_kdata(socket_client, tmp_code)
-            self.data_dict[code.code].get_kdata(code.frequency).repair(fetch_data)
-        return self.data_dict[code.code]
+            self.data_dict[code_key].get_kdata(code.frequency).repair(fetch_data)
+        return self.data_dict[code_key]
 
     def get_basic_finance_data(self, code):
         if code.market not in [Market.Ashare.MarketSH.STOCK, Market.Ashare.MarketSZ.STOCK]:

@@ -41,7 +41,6 @@ def determine_market(code: str, selected_market=None):
     """
 
     ch = code[0:2]
-
     if selected_market is Market.Ashare.MarketSH:
         if ch == '60':
             return Market.Ashare.MarketSH.STOCK
@@ -97,6 +96,13 @@ def determine_market(code: str, selected_market=None):
             return Market.Ashare.MarketSH.OTHERS
 
 
+def market_str_transform(market_str):
+    if market_str in ['sh', 'SH']:
+        return Market.Ashare.MarketSH
+    elif market_str in ['sz', 'SZ']:
+        return Market.Ashare.MarketSZ
+
+
 def code_transform(code: str):
     if isinstance(code, str):
         # 聚宽股票代码格式 '600000.XSHG'
@@ -104,13 +110,13 @@ def code_transform(code: str):
         # Wind股票代码格式 '600000.SH'
         # 天软股票代码格式 'SH600000'
         if len(code) == 6:
-            return code
+            return code, None
         if len(code) == 9:
             tmp = code.split(".")
             if len(tmp[0]) == 6:
-                return tmp[0]
+                return tmp[0], market_str_transform(tmp[1])
             else:
-                return tmp[1]
+                return tmp[1], market_str_transform(tmp[0])
         if len(code) == 11:
             if code[0] in ["S"]:
                 return code.split(".")[1]
@@ -123,7 +129,7 @@ def code_transform(code: str):
 class Code:
     def __init__(self, code, frequency=None, start_time=None, end_time=None,
                  data_source: dict = None, name=None, market=None):
-        self.code = code_transform(code)
+        self.code, _market = code_transform(code)
         if name is not None:
             self.name = name
         else:
@@ -131,7 +137,7 @@ class Code:
         if market is not None:
             self.market = market
         else:
-            self.market = determine_market(code)
+            self.market = determine_market(self.code, _market)
         if frequency is not None:
             self.frequency = frequency
         else:
