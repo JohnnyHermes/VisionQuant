@@ -48,6 +48,7 @@ main_ax_trend_source = None
 space_grav_ax: bokeh.plotting.Figure
 space_grav_ax_hbar: bokeh.models.GlyphRenderer
 space_grav_ax_line: bokeh.models.GlyphRenderer
+space_grav_dist_source: bokeh.models.ColumnDataSource
 avg_cost_line = None
 
 #  time_grav ax parameters
@@ -131,6 +132,26 @@ def get_analyze_data(_code):
         return 0
 
 
+def configure_update_data(old_data, new_data: dict):
+    patch = dict()
+    stream = dict()
+    keys = list(new_data.keys())
+    length = len(old_data[keys[0]])
+    new_length = len(new_data[keys[0]])
+    for key in keys:
+        if new_length > length:
+            index = np.where(old_data[key] != new_data[key][:length])[0]
+        else:
+            index = np.where(old_data[key] != new_data[key])[0]
+        if index.size > 0:
+            new_value = new_data[key][index]
+            patch[key] = [(int(i), v) for i, v in zip(index, new_value)]  # index元素是np.int64类型，不转换会报错
+    if new_length > length:
+        for key in keys:
+            stream[key] = new_data[key][length:]
+    return patch, stream
+
+
 def create_main_ax():
     global main_ax, multi_line_source
     main_ax = figure(plot_width=MAIN_WEIGHT, plot_height=MAIN_HEIGHT,
@@ -139,6 +160,9 @@ def create_main_ax():
                      active_drag=x_pan_tool,
                      active_scroll=x_wheel_zoom_tool,
                      y_axis_location='right',
+                     lod_threshold=1000,
+                     lod_factor=50,
+                     lod_interval=250
                      )
     main_ax.x_range = DataRange1d(bounds=(0, ana_result.last_index + 1920), start=0, end=ana_result.last_index + 960)
     main_ax.grid.grid_line_alpha = 0.4
@@ -210,15 +234,21 @@ def draw_main_ax(x_range=None):
         if level != 0:
             main_ax_line_source_dict[level] = ColumnDataSource(
                 data={'index': points['index'][:-1], 'price': points['price'][:-1]})
-            main_ax_line_dict[level] = main_ax.line(x='index', y='price', source=main_ax_line_source_dict[level],
-                                                    color=line_colorlist[level],
-                                                    legend_label='级别{}'.format(level))
+            main_ax.line(x='index', y='price', source=main_ax_line_source_dict[level],
+                                                      color=line_colorlist[level],
+                                                      legend_label='级别{}'.format(level))
+            # main_ax_line_dict[level] = main_ax.line(x='index', y='price', source=main_ax_line_source_dict[level],
+            #                                         color=line_colorlist[level],
+            #                                         legend_label='级别{}'.format(level))
         else:
             main_ax_line_source_dict[level] = ColumnDataSource(
                 data={'index': points['index'], 'price': points['price']})
-            main_ax_line_dict[level] = main_ax.line(x='index', y='price', source=main_ax_line_source_dict[level],
-                                                    color=line_colorlist[level],
-                                                    legend_label='级别{}'.format(level))
+            main_ax.line(x='index', y='price', source=main_ax_line_source_dict[level],
+                         color=line_colorlist[level],
+                         legend_label='级别{}'.format(level))
+            # main_ax_line_dict[level] = main_ax.line(x='index', y='price', source=main_ax_line_source_dict[level],
+            #                                         color=line_colorlist[level],
+            #                                         legend_label='级别{}'.format(level))
             base_points = main_ax.scatter(x='index', y='price', source=main_ax_line_source_dict[level], alpha=0, size=1)
 
     main_ax_trend_source = ColumnDataSource(data=ana_result.trend_dict)
@@ -408,13 +438,28 @@ def update_main_ax():
     for level, points in points_dict.items():
         if level != 0:
             new_data = {'index': points['index'][:-1], 'price': points['price'][:-1]}
-            main_ax_line_source_dict[level].data = new_data
-            main_ax_line_dict[level].data_source.data = new_data
+            patch, stream = configure_update_data(main_ax_line_source_dict[level].data, new_data)
+            if patch:
+                main_ax_line_source_dict[level].patch(patch)
+            if stream:
+                main_ax_line_source_dict[level].stream(stream)
+            # main_ax_line_source_dict[level].data = new_data
+            # main_ax_line_dict[level].data_source.data = new_data
         else:
             new_data = {'index': points['index'], 'price': points['price']}
-            main_ax_line_source_dict[level].data = new_data
-            main_ax_line_dict[level].data_source.data = new_data
-            base_points.data_source.data = new_data
+            patch, stream = configure_update_data(main_ax_line_source_dict[level].data, new_data)
+            # print(main_ax_line_source_dict[level].data['index'][-2:], main_ax_line_source_dict[level].data['price'][-2:])
+            # print(patch)
+            # print(stream)
+            if patch:
+                main_ax_line_source_dict[level].patch(patch)
+                # base_points.data_source.patch(patch)
+            if stream:
+                main_ax_line_source_dict[level].stream(stream)
+                # base_points.data_source.stream(stream)
+            # main_ax_line_source_dict[level].data = new_data
+            # main_ax_line_dict[level].data_source.data = new_data
+            # base_points.data_source.data = new_data
     main_ax_trend_source.data = ana_result.trend_dict
     indices = np.where((main_ax_line_source_dict[0].data['index'] >= main_ax.x_range.start) &
                        (main_ax_line_source_dict[0].data['index'] <= main_ax.x_range.end))
@@ -484,8 +529,12 @@ def create_time_grav_ax():
                           toolbar_location=None,
                           x_range=main_ax.x_range,
                           y_axis_location='right',
-                          active_drag=None
+                          active_drag=None,
+                          lod_threshold=1000,
+                          lod_factor=50,
+                          lod_interval=250
                           )
+    time_grav_ax.y_range.only_visible = True
     time_grav_ax.xaxis.visible = False
     time_grav_ax.grid.grid_line_alpha = 0.4
     time_grav_ax.xaxis.ticker.base = 24
@@ -499,8 +548,8 @@ def create_time_grav_ax():
 
 def configure_time_grav_ax_yrange(data_dict, start=None, end=None, is_mvol=False):
     global time_grav_ax
-    indices = np.where((data_dict['index'] >= main_ax.x_range.start) &
-                       (data_dict['index'] <= main_ax.x_range.end))
+    indices = np.where((data_dict['index'] >= time_grav_ax.x_range.start) &
+                       (data_dict['index'] <= time_grav_ax.x_range.end))
     if indices:
         max_val = None
         min_val = None
@@ -556,8 +605,11 @@ def update_time_grav_dist_mvol(indicator):
     sellvol = np.sqrt(indicator['val']['sellvol'])
     allvol = np.sqrt(indicator['val']['allvol'])
     new_data = {'index': index, 'buyvol': buyvol, 'sellvol': sellvol, 'allvol': allvol}
-    time_grav_dist_source.data = new_data
-    configure_time_grav_ax_yrange(time_grav_dist_source.data, is_mvol=True)
+    patch, stream = configure_update_data(time_grav_dist_source.data, new_data)
+    if patch:
+        time_grav_dist_source.patch(patch)
+    if stream:
+        time_grav_dist_source.stream(stream)
 
 
 def draw_time_grav_dist_lsd(indicator):
@@ -619,7 +671,6 @@ def draw_time_grav_dist_trend(indicator):
                       color='white', legend_label='short')
     time_grav_ax.line(x='index', y='long', source=time_grav_dist_source,
                       color='yellow', legend_label='long')
-
     time_grav_ax.legend.location = "top_left"
     configure_time_grav_ax_yrange(indicator['val'])
 
@@ -631,20 +682,29 @@ def update_time_grav_dist_lsd(indicator):
     long = indicator['val']['long'] * 100
     all_lisandu = indicator['val']['all'] * 100
     new_data = {'index': index, 'short': short, 'long': long, 'all': all_lisandu}
-    time_grav_dist_source.data = new_data
-    configure_time_grav_ax_yrange(time_grav_dist_source.data, start=0)
+    patch, stream = configure_update_data(time_grav_dist_source.data, new_data)
+    if patch:
+        time_grav_dist_source.patch(patch)
+    if stream:
+        time_grav_dist_source.stream(stream)
 
 
 def update_time_grav_dist_mtm(indicator):
     global time_grav_dist_source
-    time_grav_dist_source.data = indicator['val']
-    configure_time_grav_ax_yrange(time_grav_dist_source.data)
+    patch, stream = configure_update_data(time_grav_dist_source.data, indicator['val'])
+    if patch:
+        time_grav_dist_source.patch(patch)
+    if stream:
+        time_grav_dist_source.stream(stream)
 
 
 def update_time_grav_dist_trend(indicator):
     global time_grav_dist_source
-    time_grav_dist_source.data = indicator['val']
-    configure_time_grav_ax_yrange(time_grav_dist_source.data)
+    patch, stream = configure_update_data(time_grav_dist_source.data, indicator['val'])
+    if patch:
+        time_grav_dist_source.patch(patch)
+    if stream:
+        time_grav_dist_source.stream(stream)
 
 
 def draw_time_grav_dist():
@@ -716,13 +776,13 @@ def calc_space_grav_dist(end_index, start_index=0):
 
 
 def draw_space_grav_dist():
-    global avg_cost_line, space_grav_ax_hbar, space_grav_ax_line
+    global avg_cost_line, space_grav_ax_hbar, space_grav_ax_line, space_grav_dist_source
     dist_data = calc_space_grav_dist(ana_result.last_index)
-    grav_dist_source = ColumnDataSource(data=dist_data)
+    space_grav_dist_source = ColumnDataSource(data=dist_data)
     height = ana_result.space_grav.step * 0.7
     space_grav_ax_hbar = space_grav_ax.hbar(left=0, right='volume', y='price', height=height, color='#6666cc',
-                                            source=grav_dist_source)
-    space_grav_ax_line = space_grav_ax.line(x='cdf', y='price', source=grav_dist_source, color='#eeeeee')
+                                            source=space_grav_dist_source)
+    space_grav_ax_line = space_grav_ax.line(x='cdf', y='price', source=space_grav_dist_source, color='#eeeeee')
     avg_price = relativity_cy.get_avg_price(dist_data['price'], dist_data['volume'], 0.5)
     avg_cost_line = Span(location=avg_price, dimension='width', line_color='yellow', line_width=2)
     space_grav_ax.add_layout(avg_cost_line)
@@ -731,8 +791,13 @@ def draw_space_grav_dist():
 def update_space_grav_dist():
     global avg_cost_line, space_grav_ax_hbar
     dist_data = calc_space_grav_dist(ana_result.last_index)
-    space_grav_ax_line.data_source.data = dist_data
-    space_grav_ax_hbar.data_source.data = dist_data
+    patch, stream = configure_update_data(space_grav_dist_source.data, dist_data)
+    if patch:
+        space_grav_dist_source.patch(patch)
+    if stream:
+        space_grav_dist_source.stream(stream)
+    # space_grav_ax_line.data_source.data = dist_data
+    # space_grav_ax_hbar.data_source.data = dist_data
     space_grav_ax_hbar.glyph.height = ana_result.space_grav.step * 0.7
     avg_price = relativity_cy.get_avg_price(dist_data['price'], dist_data['volume'], 0.5)
     avg_cost_line.location = avg_price
