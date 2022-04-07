@@ -6,7 +6,7 @@ import numpy as np
 from bokeh.layouts import gridplot, column, row
 from bokeh.models import ColumnDataSource, CustomJS, DataRange1d, BoxSelectTool, RadioButtonGroup, \
     Span, Button, Label, Select, TextInput, NumeralTickFormatter, WheelZoomTool, ResetTool, \
-    PanTool, CheckboxGroup, Paragraph, PolyDrawTool, Title
+    PanTool, CheckboxGroup, Paragraph, PolyDrawTool, Title, BoxAnnotation
 from bokeh.io import curdoc
 from bokeh.models import CrosshairTool
 from bokeh.palettes import Set2_8
@@ -50,6 +50,7 @@ space_grav_ax_hbar: bokeh.models.GlyphRenderer
 space_grav_ax_line: bokeh.models.GlyphRenderer
 space_grav_dist_source: bokeh.models.ColumnDataSource
 avg_cost_line = None
+val_vah_box = None
 
 #  time_grav ax parameters
 time_grav_ax: bokeh.plotting.Figure
@@ -235,8 +236,8 @@ def draw_main_ax(x_range=None):
             main_ax_line_source_dict[level] = ColumnDataSource(
                 data={'index': points['index'][:-1], 'price': points['price'][:-1]})
             main_ax.line(x='index', y='price', source=main_ax_line_source_dict[level],
-                                                      color=line_colorlist[level],
-                                                      legend_label='级别{}'.format(level))
+                         color=line_colorlist[level],
+                         legend_label='级别{}'.format(level))
             # main_ax_line_dict[level] = main_ax.line(x='index', y='price', source=main_ax_line_source_dict[level],
             #                                         color=line_colorlist[level],
             #                                         legend_label='级别{}'.format(level))
@@ -586,11 +587,12 @@ def draw_time_grav_dist_mvol(indicator):
     index = (2 * indicator['val']['index'] - indicator['val']['width']) / 2
     buyvol = np.sqrt(indicator['val']['buyvol'])
     sellvol = np.sqrt(indicator['val']['sellvol'])
-    allvol = np.sqrt(indicator['val']['allvol'])
-    new_data = {'index': index, 'buyvol': buyvol, 'sellvol': sellvol, 'allvol': allvol}
+    # allvol = np.sqrt(indicator['val']['allvol'])
+    # new_data = {'index': index, 'buyvol': buyvol, 'sellvol': sellvol, 'allvol': allvol}
+    new_data = {'index': index, 'buyvol': buyvol, 'sellvol': sellvol}
     time_grav_dist_source.data = new_data
-    time_grav_ax.line(x='index', y='allvol', source=time_grav_dist_source,
-                      color='#eeeeee', line_alpha=0.6)
+    # time_grav_ax.line(x='index', y='allvol', source=time_grav_dist_source,
+    #                   color='#eeeeee', line_alpha=0.6)
     time_grav_ax.circle(x='index', y='buyvol', source=time_grav_dist_source,
                         color='red')
     time_grav_ax.circle(x='index', y='sellvol', source=time_grav_dist_source,
@@ -603,13 +605,15 @@ def update_time_grav_dist_mvol(indicator):
     index = (2 * indicator['val']['index'] - indicator['val']['width']) / 2
     buyvol = np.sqrt(indicator['val']['buyvol'])
     sellvol = np.sqrt(indicator['val']['sellvol'])
-    allvol = np.sqrt(indicator['val']['allvol'])
-    new_data = {'index': index, 'buyvol': buyvol, 'sellvol': sellvol, 'allvol': allvol}
+    # allvol = np.sqrt(indicator['val']['allvol'])
+    # new_data = {'index': index, 'buyvol': buyvol, 'sellvol': sellvol, 'allvol': allvol}
+    new_data = {'index': index, 'buyvol': buyvol, 'sellvol': sellvol}
     patch, stream = configure_update_data(time_grav_dist_source.data, new_data)
     if patch:
         time_grav_dist_source.patch(patch)
     if stream:
         time_grav_dist_source.stream(stream)
+    configure_time_grav_ax_yrange(indicator['val'])
 
 
 def draw_time_grav_dist_lsd(indicator):
@@ -687,6 +691,7 @@ def update_time_grav_dist_lsd(indicator):
         time_grav_dist_source.patch(patch)
     if stream:
         time_grav_dist_source.stream(stream)
+    configure_time_grav_ax_yrange(time_grav_dist_source.data, start=0)
 
 
 def update_time_grav_dist_mtm(indicator):
@@ -696,6 +701,7 @@ def update_time_grav_dist_mtm(indicator):
         time_grav_dist_source.patch(patch)
     if stream:
         time_grav_dist_source.stream(stream)
+    configure_time_grav_ax_yrange(indicator['val'])
 
 
 def update_time_grav_dist_trend(indicator):
@@ -705,6 +711,7 @@ def update_time_grav_dist_trend(indicator):
         time_grav_dist_source.patch(patch)
     if stream:
         time_grav_dist_source.stream(stream)
+    configure_time_grav_ax_yrange(indicator['val'])
 
 
 def draw_time_grav_dist():
@@ -776,7 +783,7 @@ def calc_space_grav_dist(end_index, start_index=0):
 
 
 def draw_space_grav_dist():
-    global avg_cost_line, space_grav_ax_hbar, space_grav_ax_line, space_grav_dist_source
+    global avg_cost_line, val_vah_box, space_grav_ax_hbar, space_grav_ax_line, space_grav_dist_source
     dist_data = calc_space_grav_dist(ana_result.last_index)
     space_grav_dist_source = ColumnDataSource(data=dist_data)
     height = ana_result.space_grav.step * 0.7
@@ -784,23 +791,25 @@ def draw_space_grav_dist():
                                             source=space_grav_dist_source)
     space_grav_ax_line = space_grav_ax.line(x='cdf', y='price', source=space_grav_dist_source, color='#eeeeee')
     avg_price = relativity_cy.get_avg_price(dist_data['price'], dist_data['volume'], 0.5)
+    vah = relativity_cy.get_avg_price(dist_data['price'], dist_data['volume'], 0.8413)
+    val = relativity_cy.get_avg_price(dist_data['price'], dist_data['volume'], 0.1587)
     avg_cost_line = Span(location=avg_price, dimension='width', line_color='yellow', line_width=2)
+    val_vah_box = BoxAnnotation(bottom=val, top=vah, fill_alpha=0.2, fill_color='#66ccff', level="underlay")
+    space_grav_ax.add_layout(val_vah_box)
     space_grav_ax.add_layout(avg_cost_line)
 
 
 def update_space_grav_dist():
-    global avg_cost_line, space_grav_ax_hbar
+    global avg_cost_line, space_grav_ax_hbar, val_vah_box
     dist_data = calc_space_grav_dist(ana_result.last_index)
-    patch, stream = configure_update_data(space_grav_dist_source.data, dist_data)
-    if patch:
-        space_grav_dist_source.patch(patch)
-    if stream:
-        space_grav_dist_source.stream(stream)
-    # space_grav_ax_line.data_source.data = dist_data
-    # space_grav_ax_hbar.data_source.data = dist_data
+    space_grav_dist_source.data = dist_data
     space_grav_ax_hbar.glyph.height = ana_result.space_grav.step * 0.7
     avg_price = relativity_cy.get_avg_price(dist_data['price'], dist_data['volume'], 0.5)
+    vah = relativity_cy.get_avg_price(dist_data['price'], dist_data['volume'], 0.8413)
+    val = relativity_cy.get_avg_price(dist_data['price'], dist_data['volume'], 0.1587)
     avg_cost_line.location = avg_price
+    val_vah_box.bottom = val
+    val_vah_box.top = vah
 
 
 def update_space_grav_dist_normal(event):
@@ -814,9 +823,12 @@ def update_space_grav_dist_normal(event):
         else:
             tmp_end_index = round(tmp_end_index)
         new_grav_dist = calc_space_grav_dist(tmp_end_index)
-        space_grav_ax_hbar.data_source.data = new_grav_dist
-        space_grav_ax_line.data_source.data = new_grav_dist
+        space_grav_dist_source.data = new_grav_dist
         avg_cost_line.location = relativity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.5)
+        vah = relativity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.8413)
+        val = relativity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.1587)
+        val_vah_box.bottom = val
+        val_vah_box.top = vah
 
 
 def update_space_grav_dist_sum(attr, old, new):
@@ -827,17 +839,23 @@ def update_space_grav_dist_sum(attr, old, new):
             end_index = base_points.data_source.data['index'][tmp_idx]
             start_index = base_points.data_source.data['index'][indices[0]]
             new_grav_dist = calc_space_grav_dist(end_index, start_index)
-            space_grav_ax_hbar.data_source.data = new_grav_dist
-            space_grav_ax_line.data_source.data = new_grav_dist
+            space_grav_dist_source.data = new_grav_dist
             avg_cost_line.location = relativity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.5)
+            vah = relativity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.8413)
+            val = relativity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.1587)
+            val_vah_box.bottom = val
+            val_vah_box.top = vah
 
 
 def update_space_grave_dist_none():
     base_points.data_source.selected.indices = []
     new_grav_dist = calc_space_grav_dist(ana_result.last_index)
-    space_grav_ax_hbar.data_source.data = new_grav_dist
-    space_grav_ax_line.data_source.data = new_grav_dist
+    space_grav_dist_source.data = new_grav_dist
     avg_cost_line.location = relativity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.5)
+    vah = relativity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.8413)
+    val = relativity_cy.get_avg_price(new_grav_dist['price'], new_grav_dist['volume'], 0.1587)
+    val_vah_box.bottom = val
+    val_vah_box.top = vah
 
 
 def space_grav_calc_mode_callback(attr, old, new):

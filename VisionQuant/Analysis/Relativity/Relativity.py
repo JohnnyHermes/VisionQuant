@@ -103,6 +103,7 @@ class Relativity(StrategyBase):
         # print('calc particle', time.perf_counter() - t)
         #
         # t = time.perf_counter()
+
         time_grav_dict = self.time_grav.calc_time_grav_dict(volume)
         line_dist0 = time_grav_dict[0]
         # plt.hist(line_dist1['dindex'], 50)
@@ -198,12 +199,21 @@ class Relativity(StrategyBase):
         # final_index_new = Indicators.EMA(np.array(final_index_new), 6)
         # self.indicators.append(
         #     {'name': 'mfi', 'index': vol_index, 'val': [buy_index, sell_index, final_index, final_index_new,test_index]})
-
+        index = time_grav_dict[0]['index']
+        width = time_grav_dict[0]['dindex']
+        buy_index = np.where(time_grav_dict[0]['buyvol'] > 0)[0]
+        sell_index = np.where(time_grav_dict[0]['sellvol'] > 0)[0]
+        buy_volume_series = pd.Series(time_grav_dict[0]['buyvol'][buy_index])
+        sell_volume_series = pd.Series(time_grav_dict[0]['sellvol'][sell_index])
+        if buy_index[0] == 0:
+            flag = 1
+        else:
+            flag = 0
         for level, line_dist in time_grav_dict.items():
             # index = line_dist['index']
             # width = line_dist['dindex']
-            index = time_grav_dict[0]['index']
-            width = time_grav_dict[0]['dindex']
+            # index = time_grav_dict[0]['index']
+            # width = time_grav_dict[0]['dindex']
             # dp = line_dist['dprice']
             # buy_mask = np.where(dp > 0, 1, 0)
             # sell_mask = np.where(dp < 0, 1, 0)
@@ -214,22 +224,38 @@ class Relativity(StrategyBase):
             # val[minus_list] *= -1
             # mean_allvol = (line_dist['buyvol'] + line_dist['sellvol']) / (
             #         line_dist['sellindex'] + line_dist['buyindex'])
-            mean_allvol = np.array(pd.Series((time_grav_dict[0]['buyvol']+time_grav_dict[0]['sellvol']) / 2).ewm(span=3 ** level+1, min_periods=1).mean())
+            #mean_allvol = np.array(pd.Series(time_grav_dict[0]['buyvol']+time_grav_dict[0]['sellvol'] / 2).ewm(span=3 ** level+1, min_periods=1).mean())
             #mean_allvol = np.array(pd.Series((time_grav_dict[0]['buyvol']+time_grav_dict[0]['sellvol']) / 2).rolling(window=3 ** level * 2, min_periods=1).mean())
-            line_dist['buyindex'][np.where(line_dist['buyindex'] == 0)] = 1
-            line_dist['sellindex'][np.where(line_dist['sellindex'] == 0)] = 1
+            # line_dist['buyindex'][np.where(line_dist['buyindex'] == 0)] = 1
+            # line_dist['sellindex'][np.where(line_dist['sellindex'] == 0)] = 1
             # mean_buyvol = line_dist['buyvol'] / line_dist['buyindex']
             # mean_sellvol = line_dist['sellvol'] / line_dist['sellindex']
-            mean_buyvol = np.array(pd.Series(time_grav_dict[0]['buyvol']).ewm(span=3 ** level+1, min_periods=1).mean())
-            mean_sellvol = np.array(pd.Series(time_grav_dict[0]['sellvol']).ewm(span=3 ** level+1, min_periods=1).mean())
+            tmp_mean_buyvol = np.array(buy_volume_series.ewm(span=3 ** level+1, min_periods=1).mean())
+            tmp_mean_sellvol = np.array(sell_volume_series.ewm(span=3 ** level+1, min_periods=1).mean())
+            mean_buyvol = np.zeros(len(buy_index) + len(sell_index))
+            mean_sellvol = np.zeros(len(buy_index) + len(sell_index))
+            if flag:
+                mean_buyvol[::2] = tmp_mean_buyvol
+                mean_buyvol[1::2] = mean_buyvol[:-1:2]
+                mean_sellvol[1::2] = tmp_mean_sellvol
+                mean_sellvol[2::2] = mean_sellvol[1:-1:2]
+                mean_sellvol[0] = mean_sellvol[1]
+
+            else:
+                mean_sellvol[::2] = tmp_mean_sellvol
+                mean_sellvol[1::2] = mean_sellvol[:-1:2]
+                mean_buyvol[1::2] = tmp_mean_buyvol
+                mean_buyvol[2::2] = mean_buyvol[1:-1:2]
+                mean_buyvol[0] = mean_buyvol[1]
+
+
             # mean_buyvol = np.array(pd.Series(time_grav_dict[0]['buyvol']).rolling(window=3 ** level * 2, min_periods=1).mean())
             # mean_sellvol = np.array(pd.Series(time_grav_dict[0]['sellvol']).rolling(window=3 ** level * 2, min_periods=1).mean())
             # buyvol = all_vol * buy_mask / dl
             # sellvol = all_vol * sell_mask / dl
             self.indicators.append(
                 {'name': '平均成交量 级别{}'.format(level),
-                 'val': {'index': index, 'width': width, 'buyvol': mean_buyvol, 'sellvol': mean_sellvol,
-                         'allvol': mean_allvol}})
+                 'val': {'index': index, 'width': width, 'buyvol': mean_buyvol, 'sellvol': mean_sellvol}})
         self.indicators.append({'name': '均线离散度',
                                 'val': {'index': mid_index, 'short': short_lisandu, 'long': long_lisandu,
                                         'all': all_lisandu}})
