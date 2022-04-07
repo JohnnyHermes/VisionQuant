@@ -1,6 +1,6 @@
 #! encoding=utf-8
 import sys
-
+import gc
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -17,7 +17,6 @@ from VisionQuant.utils import TimeTool
 from VisionQuant.utils.VQlog import logger
 import argparse
 
-
 # 命令行参数解析
 parser = argparse.ArgumentParser()
 parser.add_argument('-f', "--force_update", help="不考虑是否为交易日，强制更新数据",
@@ -26,7 +25,7 @@ parser.add_argument('-m', "--market", help="要更新的市场,目前支持Ashar
 parser.add_argument('-c', "--code", help="指定要更新的股票代码，主要用于修复数据", nargs='+')
 parser.add_argument('-d', "--date", help="指定要分析的日期，主要用于修复分析数据，仅在level=analyze时生效", nargs='+')
 parser.add_argument("-u", "--update", help="要更新的数据", default='all', nargs='+',
-                    choices=['basic', 'kdata', 'analyze','relativity', 'blocks_score', 'all'])
+                    choices=['basic', 'kdata', 'analyze', 'relativity', 'blocks_score', 'all'])
 
 args = parser.parse_args()
 
@@ -172,6 +171,7 @@ class AshareDataUpdate(DataUpdateBase):
                         records_list.append(res)
                 except Exception as e:
                     logger.error("Relativity分析 {} {} 时出现错误，详细信息: {}{}".format(_date, code.code, e.__class__, e))
+                gc.collect()
 
             result_df = pd.DataFrame.from_records(records_list)
             store_relativity_score_data_to_hdf5(result_df, market=Market.Ashare)
