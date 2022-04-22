@@ -25,8 +25,8 @@ if __name__ == '__main__':
 
     test_data_dict = {'5': test_data}
     test = AShare(code.code, test_data_dict)
-    print(test.get_kdata('5').fliter('time', '2021-1-1 9:30', datetime.datetime(2021, 6, 24, 15, 0, 0),
+    print(test.get_kdata('5').filter('time', '2021-1-1 9:30', datetime.datetime(2021, 6, 24, 15, 0, 0),
                                      is_reset_index=False).data_struct)
 
-    print(test.get_kdata('5').fliter('time', '2021-1-1 9:30', datetime.datetime(2021, 6, 24, 15, 0, 0),
+    print(test.get_kdata('5').filter('time', '2021-1-1 9:30', datetime.datetime(2021, 6, 24, 15, 0, 0),
                                      is_reset_index=False).get_last_time())

@@ -77,8 +77,8 @@ class DataSourceTdxLive(DataSourceBase):
             if len(fetched_kdata) == 0:
                 return fetched_kdata
             # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
-            fetched_kdata.drop(fetched_kdata[fetched_kdata['volume'] == 0].index, inplace=True)
-            fetched_kdata.reset_index(drop=True, inplace=True)
+            # fetched_kdata.drop(fetched_kdata[fetched_kdata['volume'] == 0].index, inplace=True)
+            # fetched_kdata.reset_index(drop=True, inplace=True)
         return fetched_kdata
 
     @staticmethod

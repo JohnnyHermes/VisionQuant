@@ -199,7 +199,7 @@ class BackTrader:
         time_stamp = self.timestamp
         for bt_now_time in time_stamp:
             # fliter出新的kdatastruct
-            tmp_data = self.data_struct.fliter(key='time', start=self.kdata_start_time,
+            tmp_data = self.data_struct.filter(key='time', start=self.kdata_start_time,
                                                end=bt_now_time, is_reset_index=True)
             print(TimeTool.time_to_str(tmp_data.get_kdata('5').get_last_time()))
             # 运行策略，更新数据
@@ -292,7 +292,7 @@ if __name__ == '__main__':
         price_ax = plt.subplot(grid[0:9, 0:1])
         plt.title(time_str)
         close = np.array(
-            test_bt.data_struct.get_kdata('5').fliter(key='time', start=start_time, end=end_time).data_struct['close'].values)
+            test_bt.data_struct.get_kdata('5').filter(key='time', start=start_time, end=end_time).data_struct['close'].values)
         # close = close[2::3]
         tp_log = np.array(test_bt.account.risk_mng.target_price_log)
         sp_log = np.array(test_bt.account.risk_mng.stop_price_log)

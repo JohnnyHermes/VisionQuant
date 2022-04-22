@@ -2,6 +2,7 @@ from VisionQuant.utils import CfgTool
 
 TDX_DIR = CfgTool.get_cfg('DataSource', 'tdx_dir')
 LOCAL_DIR = CfgTool.get_cfg('DataSource', 'local_dir')
+WEB_DIR = CfgTool.get_cfg('DataSource', 'web_dir')
 REMOTE_ADDR = CfgTool.get_cfg('DataSource', 'remote_addr')
 _DEFAULT_ASHARE_LOCAL_DATASOURCE = CfgTool.get_cfg('DataSource', 'ashare_local_source')
 _DEFAULT_ASHARE_LIVE_DATASOURCE = CfgTool.get_cfg('DataSource', 'ashare_live_source')

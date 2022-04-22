@@ -114,7 +114,7 @@ def is_trade_time(market):
         t1 = nowtime.replace(hour=9, minute=30, second=0, microsecond=0)
         # t2 = nowtime.replace(hour=11, minute=30, second=15)
         # t3 = nowtime.replace(hour=13, minute=0, second=0)
-        t4 = nowtime.replace(hour=15, minute=0, second=15, microsecond=0)
+        t4 = nowtime.replace(hour=15, minute=30, second=0, microsecond=0)
         # if t1 <= nowtime <= t2 or t3 <= nowtime <= t4:
         if t1 <= nowtime <= t4:
             return 1

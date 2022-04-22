@@ -32,6 +32,7 @@ class HqClient:
             self.connect()
         except Exception as e:
             print(e)
+            print("行情服务器可能未启动，请检查！")
             return None
         else:
             request_body = pickle.dumps(codes)
@@ -73,6 +74,7 @@ class HqClient:
             self.connect()
         except Exception as e:
             print(e)
+            print("行情服务器可能未启动，请检查！")
             return None
         else:
             request_body = pickle.dumps(kwargs)
@@ -94,6 +96,7 @@ class HqClient:
             self.connect()
         except Exception as e:
             print(e)
+            print("行情服务器可能未启动，请检查！")
             return None
         else:
             request_body = pickle.dumps(_code)

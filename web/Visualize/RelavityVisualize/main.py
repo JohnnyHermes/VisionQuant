@@ -270,6 +270,10 @@ def draw_main_ax(x_range=None):
     main_ax.y_range.start = round(min_price - pad_price, decimal_num)
 
     time_list = [TimeTool.time_to_str(t, '%y-%m-%d %H:%M') for t in ana_result.kdata.data['time']]
+    len_time_list = len(time_list)
+    for i in range(len_time_list, ana_result.last_index + 1920):
+        minutes = 5 * (i - len_time_list + 1)
+        time_list.append("+{}min".format(minutes))
     xaxis_label_dict = dict(zip(range(len(time_list)), time_list))
     main_ax.xaxis.major_label_overrides = xaxis_label_dict
     main_ax.legend.click_policy = "hide"
@@ -477,6 +481,10 @@ def update_main_ax():
     main_ax_last_price_line.location = ana_result.last_price
 
     time_list = [TimeTool.time_to_str(t, '%y-%m-%d %H:%M') for t in ana_result.kdata.data['time']]
+    len_time_list = len(time_list)
+    for i in range(len_time_list, ana_result.last_index + 1920):
+        minutes = 5 * (i - len_time_list + 1)
+        time_list.append("+{}min".format(minutes))
     xaxis_label_dict = dict(zip(range(len(time_list)), time_list))
     main_ax.xaxis.major_label_overrides = xaxis_label_dict
 
@@ -613,7 +621,7 @@ def update_time_grav_dist_mvol(indicator):
         time_grav_dist_source.patch(patch)
     if stream:
         time_grav_dist_source.stream(stream)
-    configure_time_grav_ax_yrange(indicator['val'])
+    configure_time_grav_ax_yrange(time_grav_dist_source.data)
 
 
 def draw_time_grav_dist_lsd(indicator):
@@ -701,7 +709,7 @@ def update_time_grav_dist_mtm(indicator):
         time_grav_dist_source.patch(patch)
     if stream:
         time_grav_dist_source.stream(stream)
-    configure_time_grav_ax_yrange(indicator['val'])
+    configure_time_grav_ax_yrange(time_grav_dist_source.data)
 
 
 def update_time_grav_dist_trend(indicator):
@@ -711,7 +719,7 @@ def update_time_grav_dist_trend(indicator):
         time_grav_dist_source.patch(patch)
     if stream:
         time_grav_dist_source.stream(stream)
-    configure_time_grav_ax_yrange(indicator['val'])
+    configure_time_grav_ax_yrange(time_grav_dist_source.data)
 
 
 def draw_time_grav_dist():

@@ -1,11 +1,11 @@
 import json
 from path import Path
-from VisionQuant.utils.Params import LOCAL_DIR
+from VisionQuant.utils.Params import WEB_DIR
 
 record_data: dict = dict()
 
 fname = 'VisualizeDrawing.json'
-fpath = Path('/'.join([LOCAL_DIR, 'Web', fname]))
+fpath = Path('/'.join([WEB_DIR, fname]))
 if fpath.exists():
     with open(fpath, 'r') as f:
         record_data = json.load(f)

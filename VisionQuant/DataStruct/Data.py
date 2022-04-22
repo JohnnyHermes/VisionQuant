@@ -15,7 +15,7 @@ class KDataStruct:
     def __len__(self):
         return len(self.data)
 
-    def fliter(self, key='index', start=0, end=-1, is_reset_index=False):
+    def filter(self, key='index', start=0, end=-1, is_reset_index=False):
         if len(self) == 0:
             return self
         if key == 'index':
@@ -77,14 +77,14 @@ class KDataStruct:
     def get_last_bar_values(self):
         line = self.get_last_bar()
         if line is not None:
-            return line.open.values[0], line.close.values[0], line.high.values[0],\
+            return line.open.values[0], line.close.values[0], line.high.values[0], \
                    line.low.values[0], line.volume.values[0]
         else:
             return None
 
     def remove_zero_volume(self):
         # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
-        self.data.drop(self.data[self.data['volume'] == 0].index, inplace=True)
+        self.data.drop(self.data[self.data['amount'] < 0.001].index, inplace=True)
 
     def convert_index_time(self, index=None, time=None):
         if len(self) == 0:
@@ -110,7 +110,7 @@ class KDataStruct:
     def repair(self, new_kdata):
         if len(new_kdata) == 0:
             return self
-        tmp_ori_data = self.data[self.data['time'] > new_kdata['time'].values[len(new_kdata['time'])-1]]
+        tmp_ori_data = self.data[self.data['time'] > new_kdata['time'].values[len(new_kdata['time']) - 1]]
         self.data = concat([new_kdata, tmp_ori_data])
         return self
 
@@ -125,14 +125,23 @@ class BaseDataStruct:
     def get_kdata(self, frequency):
         return self.kdata[frequency]
 
+    def add_data(self, kdata_dict):
+        for frequency, kdata_df in kdata_dict.items():
+            self.kdata[frequency] = KDataStruct(kdata_df)
+
     def get_freqs(self):
         return self.kdata.keys()
 
-    def fliter(self, key='index', start=0, end=-1, is_reset_index=True):
+    def filter(self, key='index', start=0, end=-1, is_reset_index=True):
         tmp_data = self.copy()
         for freq, kdata in tmp_data.kdata.items():
-            tmp_data.kdata[freq] = kdata.fliter(key=key, start=start, end=end, is_reset_index=is_reset_index)
+            tmp_data.kdata[freq] = kdata.filter(key=key, start=start, end=end, is_reset_index=is_reset_index)
         return tmp_data
+
+    def remove_zero_volume(self):
+        for freq, kdata in self.kdata.items():
+            # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
+            self.kdata[freq].remove_zero_volume()
 
     def copy(self):
         return deepcopy(self)

@@ -60,14 +60,14 @@ class DataServer:
                     self.data_dict[code_key] = AShare(code, data_dict)  # todo: 根据品种代码支持多品种
                     if self.force_live or TimeTool.is_trade_time(code.market):
                         self.update_data(code)
-                        kdata_list.append(self.data_dict[code_key].fliter(key='time',
+                        kdata_list.append(self.data_dict[code_key].filter(key='time',
                                                                           start=code.start_time,
                                                                           end=TimeTool.replace_time(codes.end_time,
                                                                                                     hour=23,
                                                                                                     minute=59,
                                                                                                     second=59)))
                     else:
-                        kdata_list.append(self.data_dict[code_key].fliter(key='time',
+                        kdata_list.append(self.data_dict[code_key].filter(key='time',
                                                                           start=code.start_time,
                                                                           end=code.end_time))
             return kdata_list
@@ -103,13 +103,13 @@ class DataServer:
             self.data_dict[code_key] = AShare(codes, data_dict)  # todo: 根据品种代码支持多品种
             if self.force_live or TimeTool.is_trade_time(codes.market):
                 self.update_data(codes)
-                return self.data_dict[code_key].fliter(key='time', start=codes.start_time,
-                                                         end=TimeTool.replace_time(codes.end_time,
+                return self.data_dict[code_key].filter(key='time', start=codes.start_time,
+                                                       end=TimeTool.replace_time(codes.end_time,
                                                                                    hour=23,
                                                                                    minute=59,
                                                                                    second=59))
             else:
-                return self.data_dict[code_key].fliter(key='time', start=codes.start_time, end=codes.end_time)
+                return self.data_dict[code_key].filter(key='time', start=codes.start_time, end=codes.end_time)
         else:
             raise ValueError
 
@@ -149,7 +149,7 @@ class DataServer:
                     raise TypeError("Wrong code type")
                 if code_key in self.data_dict.keys():
                     if self.force_live or TimeTool.is_trade_time(code.market):
-                        return_data[code.code] = self.update_data(code).fliter(key='time', start=code.start_time,
+                        return_data[code.code] = self.update_data(code).filter(key='time', start=code.start_time,
                                                                                end=TimeTool.replace_time(code.end_time,
                                                                                                          hour=23,
                                                                                                          minute=59,
@@ -161,7 +161,7 @@ class DataServer:
                             freq = code.frequency[0]
                         if self.data_dict[code_key].get_kdata(freq).get_start_time() > code.start_time:
                             self.repair_data(code)
-                        tmp_datastruct = self.data_dict[code_key].fliter(key='time',
+                        tmp_datastruct = self.data_dict[code_key].filter(key='time',
                                                                          start=code.start_time,
                                                                          end=code.end_time)
                         return_data[code.code] = tmp_datastruct
@@ -173,7 +173,7 @@ class DataServer:
             code_key = codes.code + str(codes.market)
             if code_key in self.data_dict.keys():
                 if self.force_live or TimeTool.is_trade_time(codes.market):
-                    tmp_datastruct = self.update_data(codes).fliter(key='time', start=codes.start_time,
+                    tmp_datastruct = self.update_data(codes).filter(key='time', start=codes.start_time,
                                                                     end=TimeTool.replace_time(codes.end_time,
                                                                                               hour=23,
                                                                                               minute=59,
@@ -186,8 +186,8 @@ class DataServer:
                         freq = codes.frequency[0]
                     if self.data_dict[code_key].get_kdata(freq).get_start_time() > codes.start_time:
                         self.repair_data(codes)
-                    tmp_datastruct = self.data_dict[code_key].fliter(key='time',
-                                                                       start=codes.start_time, end=codes.end_time)
+                    tmp_datastruct = self.data_dict[code_key].filter(key='time',
+                                                                     start=codes.start_time, end=codes.end_time)
                     return tmp_datastruct
             else:
                 return self.add_data(codes)
