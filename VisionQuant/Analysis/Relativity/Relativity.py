@@ -607,11 +607,11 @@ if __name__ == '__main__':
     import gc, time
     from matplotlib.ticker import MultipleLocator, FixedLocator
 
-    end_time = TimeTool.str_to_dt('2022-02-05 15:00:00')
-    start_time = end_time - datetime.timedelta(days=365 + 180)
+    end_time = TimeTool.str_to_dt('2022-04-24 15:00:00')
+    start_time = end_time - datetime.timedelta(days=365 + 365)
     start_time = start_time.replace(hour=9, minute=0, second=0)
     test_code_list = ['002273', '002382', '601456', '002492', '001979', '002584', '999999', '399006', '399001']
-    test_code_list1 = ['601333']
+    test_code_list1 = ['000552']
     for test_code in test_code_list1:
         t_code = Code(test_code, '5', start_time, end_time=end_time,
                       data_source={'local': DataSource.Local.Default, 'live': DataSource.Live.VQtdx})

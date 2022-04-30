@@ -26,9 +26,20 @@ class KDataStruct:
             out_df = self.data[(self.data.index >= start) & (self.data.index <= end)]
         elif key in self.data.columns:
             if key == 'time':
-                start = TimeTool.time_standardization(start)
-                end = TimeTool.time_standardization(end)
-            out_df = self.data[(self.data[key] >= start) & (self.data[key] <= end)]
+                if start != 0 and end != -1:
+                    start = TimeTool.time_standardization(start)
+                    end = TimeTool.time_standardization(end)
+                    out_df = self.data[(self.data[key] >= start) & (self.data[key] <= end)]
+                elif start == 0 and end != -1:
+                    end = TimeTool.time_standardization(end)
+                    out_df = self.data[self.data[key] <= end]
+                elif start != 0 and end == -1:
+                    start = TimeTool.time_standardization(start)
+                    out_df = self.data[self.data[key] >= start]
+                else:
+                    out_df = self.data
+            else:
+                out_df = self.data
         else:
             raise ValueError
         if is_reset_index:
@@ -85,6 +96,7 @@ class KDataStruct:
     def remove_zero_volume(self):
         # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
         self.data.drop(self.data[self.data['amount'] < 0.001].index, inplace=True)
+        self.data.reset_index(drop=True, inplace=True)
 
     def convert_index_time(self, index=None, time=None):
         if len(self) == 0:
