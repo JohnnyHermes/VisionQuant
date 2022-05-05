@@ -18,7 +18,7 @@ from VisionQuant.DataCenter.CodePool import AshareCodePool
 from VisionQuant.utils import TimeTool
 from VisionQuant.DataCenter.DataFetch import DataSource
 from VisionQuant.Analysis.Relativity.Relativity import Relativity
-from VisionQuant.utils.Params import Market
+from VisionQuant.utils.Params import MarketType
 
 curdoc().theme = 'dark_minimal'
 max_level = 7
@@ -36,7 +36,6 @@ main_ax: bokeh.plotting.Figure = None
 main_ax_line_source_dict = dict()
 main_ax_last_price_line = None
 main_ax_last_price_label: bokeh.models.Label = None
-code = None
 ana_result: Relativity = None
 decimal_num = 2
 
@@ -318,13 +317,13 @@ def draw_main_ax():
     main_ax_line_source_dict[0].js_on_change('data', ds_change_callback)
 
 
-def get_relativity_score_data(market=Market.Ashare):
+def get_relativity_score_data(market=MarketType.Ashare):
     sk = analyze_data_source.sk_client().init_socket()
     res_data = analyze_data_source.fetch_relativity_score_data(sk, market=market)
     return res_data
 
 
-def get_blocks_score_data(market=Market.Ashare):
+def get_blocks_score_data(market=MarketType.Ashare):
     sk = analyze_data_source.sk_client().init_socket()
     res_data = analyze_data_source.fetch_blocks_score_data(sk, market=market)
     return res_data
@@ -376,11 +375,11 @@ def blocks_datasource_selected_change_callback(attr, old, new):
 
 
 def datasource_selected_change_callback(attr, old, new):
-    global code, all_code_dict, score_ax_df
+    global code, score_ax_df
     select_name = datasource.data['name'][new[0]]
     select_code = datasource.data['code'][new[0]]
     select_time = datasource.data['time'][new[0]]
-    code = all_code_dict[select_code]
+    code = code_pool.get_code(select_code)
     blocks_name_list = []
     for _, data in blocks_data.items():
         for name, code_list in data.items():
@@ -587,12 +586,12 @@ def draw_score_ax():
         score_ax.x_range.start = 0
         score_ax.x_range.end = 1
     else:
-        score_ax.x_range.bounds = (0, end_index+1)
+        score_ax.x_range.bounds = (0, end_index + 1)
         if len(score_ax_ds.data['index']) > 40:
             score_ax.x_range.start = end_index - 40
         else:
             score_ax.x_range.start = end_index - len(score_ax_ds.data['index']) + 1
-        score_ax.x_range.end = end_index+1
+        score_ax.x_range.end = end_index + 1
     score_ax.line(x='index', y='value', source=score_ax_ds, line_width=2, line_color='white')
     score_ax.line(x='index', y='mean_value', source=score_ax_ds, line_width=2, line_color='yellow')
     xaxis_label_dict = dict(zip(score_ax_ds.data['index'], score_ax_ds.data['time']))
@@ -617,12 +616,12 @@ def update_score_ax(new_data, name=None, data_class=None):
         score_ax.x_range.start = 0
         score_ax.x_range.end = 1
     else:
-        score_ax.x_range.bounds = (0, end_index+1)
+        score_ax.x_range.bounds = (0, end_index + 1)
         if len(score_ax_ds.data['index']) > 40:
             score_ax.x_range.start = end_index - 40
         else:
             score_ax.x_range.start = end_index - len(score_ax_ds.data['index']) + 1
-        score_ax.x_range.end = end_index+1
+        score_ax.x_range.end = end_index + 1
     xaxis_label_dict = dict(zip(score_ax_ds.data['index'], score_ax_ds.data['time']))
     score_ax.xaxis.major_label_overrides = xaxis_label_dict
 
@@ -645,9 +644,8 @@ blocks_datasource = ColumnDataSource(df_select(blocks_source_data, 'time', last_
 blocks_datasource.selected.on_change('indices', blocks_datasource_selected_change_callback)
 
 end_time = TimeTool.get_now_time(return_type='datetime')
-start_time = TimeTool.get_start_time(end_time, days=365+180)
-all_code_dict = code_pool.get_all_code(start_time=start_time, end_time=end_time)
-code = all_code_dict['999999']
+start_time = TimeTool.get_start_time(end_time, days=365 + 180)
+code = code_pool.get_code(code='999999', start_time=start_time, end_time=end_time)
 get_analyze_data(code)
 create_main_ax()
 draw_main_ax()

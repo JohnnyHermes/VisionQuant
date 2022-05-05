@@ -3,7 +3,7 @@ import numpy as np
 import re
 from path import Path
 
-from VisionQuant.utils.Params import Market, LOCAL_DIR
+from VisionQuant.utils.Params import MarketType, LOCAL_DIR
 
 # 交易日历读取
 tradedate_fpath = Path('/'.join([LOCAL_DIR, 'AshareTradeDate.txt']))
@@ -60,6 +60,8 @@ def npdt64_to_str(dt64, fmt='%Y-%m-%d %H:%M:%S'):
 
 
 def time_to_str(t, fmt='%Y-%m-%d %H:%M:%S'):
+    if t is None:
+        return None
     if isinstance(t, datetime.datetime):
         return dt_to_str(t, fmt)
     elif isinstance(t, np.datetime64):
@@ -101,10 +103,37 @@ def get_now_time(return_type: str = 'npdt64'):
         raise ValueError
 
 
+def get_nearest_trade_date(t, market, flag='end'):
+    def _get_nearest_trade_date(_t, _trade_date_list, _flag='end'):
+        if flag == 'end':
+            i = len(_trade_date_list) - 1
+            while i >= 0:
+                if date_str >= _trade_date_list[i]:
+                    return _trade_date_list[i]
+                else:
+                    i -= 1
+            return _trade_date_list[0]
+        elif flag == 'start':
+            i = 0
+            while i <= len(_trade_date_list) - 1:
+                if date_str <= _trade_date_list[i]:
+                    return _trade_date_list[i]
+                else:
+                    i += 1
+            return _trade_date_list[len(_trade_date_list) - 1]
+    if MarketType.is_ashare(market):
+        if ASHARE_TRADE_DATE is None:
+            return None
+        date_str = time_to_str(t)
+        return _get_nearest_trade_date(date_str, ASHARE_TRADE_DATE, flag)
+    else:
+        raise ValueError  # todo: 不同市场类别
+
+
 def is_trade_time(market):
     nowtime = get_now_time(return_type='datetime')
     weekday = nowtime.isoweekday()
-    if Market.is_ashare(market):
+    if MarketType.is_ashare(market):
         if weekday > 5:
             return 0
         if ASHARE_TRADE_DATE is not None:
@@ -188,4 +217,4 @@ if __name__ == '__main__':
     print(test_dt, new_test_dt)
     print(test_npdt64, type(test_npdt64), new_test_dt)
     # print(str_to_dt(test_strtime), type(str_to_dt(test_strtime)))
-    print(is_trade_time(Market.Ashare.MarketSH.ETF))
+    print(is_ashare_trade_time(MarketType.Ashare.SH.ETF))

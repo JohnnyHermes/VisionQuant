@@ -12,9 +12,9 @@ from VisionQuant.DataCenter.VQTdx.TdxHqAPI import ResponseRecvFailed, SendReques
 from VisionQuant.utils import TimeTool, JsonTool
 from VisionQuant.DataCenter.VQTdx.TdxSocketClient import TdxStdHqSocketClient
 from VisionQuant.DataCenter.VQTdx.TdxReader import TdxStdReader
-from VisionQuant.utils.Params import Market, LOCAL_DIR, HDF5_COMPLIB, HDF5_COMP_LEVEL, EXCEPT_CODELIST, REMOTE_ADDR, \
-    _DEFAULT_ASHARE_LOCAL_DATASOURCE, _DEFAULT_ASHARE_LIVE_DATASOURCE, _DEFAULT_CODELIST_DATASOURCE, \
-    _DEFAULT_BLOCKS_DATA_DATASOURCE, _DEFAULT_BASIC_FINANCE_DATA_DATASOURCE
+from VisionQuant.utils.Params import MarketType, LOCAL_DIR, HDF5_COMPLIB, HDF5_COMP_LEVEL, EXCEPT_CODELIST, REMOTE_ADDR, \
+    ASHARE_LOCAL_DATASOURCE, ASHARE_LIVE_DATASOURCE, CODELIST_DATASOURCE, \
+    BLOCKS_DATA_DATASOURCE, BASIC_FINANCE_DATA_DATASOURCE
 from VisionQuant.DataCenter.DataStore import anadata_store_market_transform, kdata_store_market_transform
 from VisionQuant.utils.VQlog import logger
 
@@ -65,7 +65,7 @@ class DataSourceTdxLive(DataSourceBase):
             fetched_kdata = socket_client.api.get_kdata(socket_client.socket,
                                                         code=code.code,
                                                         market=code.market,
-                                                        freq=code.frequency,
+                                                        freq=code.frequency,  # 这里不同访问freq的value属性，api自动转换
                                                         count=800)
         except (ResponseRecvFailed, SendRequestPkgFailed, timeout, ResponseHeaderRecvFailed):
             logger.warning("连接至通达信服务器失败，重新尝试链接...")
@@ -83,7 +83,7 @@ class DataSourceTdxLive(DataSourceBase):
 
     @staticmethod
     @retry(stop_max_attempt_number=5)
-    def fetch_codelist(socket_client, market=Market.Ashare):
+    def fetch_codelist(socket_client, market=MarketType.Ashare):
         def flitercode(code: str):
             if (code.startswith('51') or code.startswith('58')) and code[-1] != '0':
                 return 0
@@ -150,7 +150,7 @@ class LocalReaderAPI(object):
                 return df
 
     @staticmethod
-    def get_codelist(reader, market=Market.Ashare):
+    def get_codelist(reader, market=MarketType.Ashare):
         try:
             datapath = reader.find_path_codelist(market)
             code_list = pd.read_csv(datapath, encoding='utf-8', dtype={'code': str, 'name': str, 'market': int})
@@ -161,7 +161,7 @@ class LocalReaderAPI(object):
             return code_list
 
     @staticmethod
-    def get_basic_finance_data(reader, market=Market.Ashare):
+    def get_basic_finance_data(reader, market=MarketType.Ashare):
         try:
             datapath = reader.find_path_basic_finance_data(market)
             data_df = pd.read_csv(datapath, encoding='utf-8', dtype={'代码': str, '流通股本': float,
@@ -173,7 +173,7 @@ class LocalReaderAPI(object):
             return data_df
 
     @staticmethod
-    def get_relativity_score_data(reader, market=Market.Ashare):
+    def get_relativity_score_data(reader, market=MarketType.Ashare):
         try:
             fname = 'relativity_analyze_result.h5'
             datapath = reader.find_path_anaresult(fname)
@@ -194,7 +194,7 @@ class LocalReaderAPI(object):
                 return df
 
     @staticmethod
-    def get_blocks_score_data(reader, market=Market.Ashare):
+    def get_blocks_score_data(reader, market=MarketType.Ashare):
         try:
             fname = 'blocks_score_analyze_result.h5'
             datapath = reader.find_path_anaresult(fname)
@@ -215,7 +215,7 @@ class LocalReaderAPI(object):
                 return df
 
     @staticmethod
-    def get_blocks_data(reader, market=Market.Ashare):
+    def get_blocks_data(reader, market=MarketType.Ashare):
         try:
             datapath = reader.find_path_blocksdata(market)
         except OSError as e:
@@ -320,7 +320,7 @@ class DataSourceLocal(DataSourceBase):
         fetched_kdata = socket_client.api.get_kdata(socket_client.socket,
                                                     code=code.code,
                                                     market=code.market,
-                                                    freq=code.frequency)
+                                                    freq=code.frequency.value)  # 这里要访问枚举类的value属性
         if len(fetched_kdata) == 0:
             return fetched_kdata
         out_df = fetched_kdata[(fetched_kdata['time'] >= code.start_time) &
@@ -372,7 +372,7 @@ class RequestGenerater(object):
             raise OSError('与远程服务器{} API测试连接错误！'.format(REMOTE_ADDR))
         return self
 
-    def generate_kdata_url(self, code: str, freq: str, market: Market, st, et):
+    def generate_kdata_url(self, code: str, freq: str, market: MarketType, st, et):
         """
         自动匹配文件路径，辅助函数
         :return: path
@@ -461,7 +461,7 @@ class RemoteServerAPI(object):
             raise ValueError("VQapi返回msg 为 false")
 
     @staticmethod
-    def get_codelist(req_generater, market=Market.Ashare):
+    def get_codelist(req_generater, market=MarketType.Ashare):
         get_url = req_generater.generate_codelist_url(market=market)
         resp = requests.get(get_url).content
         data = json.loads(resp)
@@ -472,7 +472,7 @@ class RemoteServerAPI(object):
             raise ValueError("VQapi返回msg 为 false")
 
     @staticmethod
-    def get_blocks_data(req_generater, market=Market.Ashare):
+    def get_blocks_data(req_generater, market=MarketType.Ashare):
         get_url = req_generater.generate_blocks_data_url(market=market)
         resp = requests.get(get_url).content
         data = json.loads(resp)
@@ -482,7 +482,7 @@ class RemoteServerAPI(object):
             raise ValueError("VQapi返回msg 为 false")
 
     @staticmethod
-    def get_relativity_score_data(req_generater, market=Market.Ashare):
+    def get_relativity_score_data(req_generater, market=MarketType.Ashare):
         get_url = req_generater.generate_relativity_anadata_url(market=market)
         resp = requests.get(get_url).content
         data = json.loads(resp)
@@ -494,7 +494,7 @@ class RemoteServerAPI(object):
             raise ValueError("VQapi返回msg 为 false")
 
     @staticmethod
-    def get_blocks_score_data(req_generater, market=Market.Ashare):
+    def get_blocks_score_data(req_generater, market=MarketType.Ashare):
         get_url = req_generater.generate_blocks_score_data_url(market=market)
         resp = requests.get(get_url).content
         data = json.loads(resp)
@@ -510,7 +510,7 @@ class RemoteServerAPI(object):
             raise ValueError("VQapi返回msg 为 false")
 
     @staticmethod
-    def get_basic_finance_data(req_generater, market=Market.Ashare):
+    def get_basic_finance_data(req_generater, market=MarketType.Ashare):
         get_url = req_generater.generate_basic_finance_data_url(market=market)
         resp = requests.get(get_url).content
         data = json.loads(resp)
@@ -530,7 +530,7 @@ class DataSourceVQAPI(DataSourceBase):
     def fetch_kdata(socket_client, code):
         fetched_kdata = socket_client.api.get_kdata(socket_client.socket,
                                                     code=code.code,
-                                                    freq=code.frequency,
+                                                    freq=code.frequency.value,
                                                     market=code.market,
                                                     st=code.start_time,
                                                     et=code.end_time
@@ -1042,47 +1042,47 @@ class DataSource(object):
 默认数据获取方法
 """
 #  默认本地A股K线数据获取方法
-if _DEFAULT_ASHARE_LOCAL_DATASOURCE == 'Default':
+if ASHARE_LOCAL_DATASOURCE == 'Default':
     DEFAULT_ASHARE_LOCAL_DATASOURCE = DataSource.Local.Default
-elif _DEFAULT_ASHARE_LOCAL_DATASOURCE == 'VQapi':
+elif ASHARE_LOCAL_DATASOURCE == 'VQapi':
     DEFAULT_ASHARE_LOCAL_DATASOURCE = DataSource.Local.VQapi
-elif _DEFAULT_ASHARE_LOCAL_DATASOURCE == 'VQtdx':
+elif ASHARE_LOCAL_DATASOURCE == 'VQtdx':
     DEFAULT_ASHARE_LOCAL_DATASOURCE = DataSource.Local.VQtdx
 else:
     DEFAULT_ASHARE_LOCAL_DATASOURCE = DataSource.Local.Default
 #  默认实时A股K线数据获取方法
-if _DEFAULT_ASHARE_LIVE_DATASOURCE == 'VQtdx':
+if ASHARE_LIVE_DATASOURCE == 'VQtdx':
     DEFAULT_ASHARE_LIVE_DATASOURCE = DataSource.Live.VQtdx
-elif _DEFAULT_ASHARE_LIVE_DATASOURCE == 'VQapi':
+elif ASHARE_LIVE_DATASOURCE == 'VQapi':
     DEFAULT_ASHARE_LIVE_DATASOURCE = DataSource.Live.VQapi
 else:
     DEFAULT_ASHARE_LIVE_DATASOURCE = DataSource.Live.VQtdx
 DEFAULT_ASHARE_DATA_SOURCE = {'local': DEFAULT_ASHARE_LOCAL_DATASOURCE, 'live': DEFAULT_ASHARE_LIVE_DATASOURCE}
 
 #  默认代码列表数据获取方法
-if _DEFAULT_CODELIST_DATASOURCE == 'Default':
+if CODELIST_DATASOURCE == 'Default':
     DEFAULT_CODELIST_DATASOURCE = DataSource.Local.Default
-elif _DEFAULT_CODELIST_DATASOURCE == 'VQapi':
+elif CODELIST_DATASOURCE == 'VQapi':
     DEFAULT_CODELIST_DATASOURCE = DataSource.Local.VQapi
-elif _DEFAULT_CODELIST_DATASOURCE == 'VQtdx':
+elif CODELIST_DATASOURCE == 'VQtdx':
     DEFAULT_CODELIST_DATASOURCE = DataSource.Local.VQtdx
 else:
     DEFAULT_CODELIST_DATASOURCE = DataSource.Local.Default
 
 #  默认板块数据获取方法
-if _DEFAULT_BLOCKS_DATA_DATASOURCE == 'Default':
+if BLOCKS_DATA_DATASOURCE == 'Default':
     DEFAULT_BLOCKS_DATA_DATASOURCE = DataSource.Local.Default
-elif _DEFAULT_BLOCKS_DATA_DATASOURCE == 'VQapi':
+elif BLOCKS_DATA_DATASOURCE == 'VQapi':
     DEFAULT_BLOCKS_DATA_DATASOURCE = DataSource.Local.VQapi
-elif _DEFAULT_BLOCKS_DATA_DATASOURCE == 'VQtdx':
+elif BLOCKS_DATA_DATASOURCE == 'VQtdx':
     DEFAULT_BLOCKS_DATA_DATASOURCE = DataSource.Local.VQtdx
 else:
     DEFAULT_BLOCKS_DATA_DATASOURCE = DataSource.Local.Default
 
 #  默认基本经济数据获取方法
-if _DEFAULT_BASIC_FINANCE_DATA_DATASOURCE == 'Default':
+if BASIC_FINANCE_DATA_DATASOURCE == 'Default':
     DEFAULT_BASIC_FINANCE_DATA_DATASOURCE = DataSource.Local.Default
-elif _DEFAULT_BASIC_FINANCE_DATA_DATASOURCE == 'VQapi':
+elif BASIC_FINANCE_DATA_DATASOURCE == 'VQapi':
     DEFAULT_BASIC_FINANCE_DATA_DATASOURCE = DataSource.Local.VQapi
 else:
     DEFAULT_BASIC_FINANCE_DATA_DATASOURCE = DataSource.Local.Default

@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from VisionQuant.DataCenter.DataServer import DataServer
 from VisionQuant.DataCenter.DataFetch import DataSource, FetchDataFailed, AshareBasicDataAPI
-from VisionQuant.utils.Params import Market
+from VisionQuant.utils.Params import MarketType, Freq
 from VisionQuant.Analysis.Relativity.Relativity import Relativity, RELATIVITY_MAX_LEVEL
 from VisionQuant.DataCenter.CodePool import AshareCodePool
 from VisionQuant.DataCenter.DataStore import store_code_list_stock, store_blocks_data, \
@@ -25,7 +25,8 @@ parser.add_argument('-c', "--code", help="指定要更新的股票代码，主�
 parser.add_argument('-d', "--date", help="指定要分析的日期，主要用于修复分析数据，仅在level=analyze时生效", nargs='+')
 parser.add_argument("-u", "--update", help="要更新的数据", default='all', nargs='+',
                     choices=['basic', 'kdata', 'analyze', 'relativity', 'blocks_score', 'all'])
-
+parser.add_argument("--frequency", help="要更新的k线数据周期", default='5', nargs='+',
+                    choices=['1', '5', 'd'])
 args = parser.parse_args()
 
 today_date = TimeTool.time_to_str(TimeTool.get_now_time(), '%Y-%m-%d')
@@ -42,6 +43,7 @@ class DataUpdateBase:
         self.live_ds = None
         self.code_pool = None
         self.analyze_date = None
+        self.update_frequency = None
 
     def config_update_type(self, level):
         self.update_type = level
@@ -51,6 +53,9 @@ class DataUpdateBase:
 
     def config_analyze_date(self, dates):
         self.analyze_date = dates
+
+    def config_update_frequency(self, _update_frequency):
+        self.update_frequency = [Freq(freq) for freq in _update_frequency]
 
     def update(self):
         pass
@@ -71,8 +76,7 @@ class AshareDataUpdate(DataUpdateBase):
         self.market_name = 'Ashare'
         self.local_ds = DataSource.Local.Default
         self.live_ds = DataSource.Live.VQtdx
-        self.code_pool = AshareCodePool(codelist_data_source=self.live_ds,
-                                        code_default_data_source={'local': self.local_ds, 'live': self.live_ds})
+        self.code_pool = AshareCodePool(codelist_data_source=self.live_ds)
 
     def update(self):
         if 'all' in self.update_type:
@@ -99,16 +103,16 @@ class AshareDataUpdate(DataUpdateBase):
 
     def _update_kdata(self):
         def update_single_stock(_code):
-            data_server.add_data(_code)
-            datastruct = data_server.update_data(_code)
+            datastruct = data_server.get_kdata(_code)
             store_kdata_to_hdf5(datastruct)
-            data_server.remove_data(_code)
 
         logger.info("开始更新 {} 的A股k线数据...".format(today_date))
         if self.update_codes is not None:
-            code_list = self.code_pool.get_code(self.update_codes).values()
+            code_list = []
+            for code in self.update_codes:
+                code_list.append(self.code_pool.get_code(code, frequency=self.update_frequency))
         else:
-            code_list = self.code_pool.get_all_code(return_type=list)
+            code_list = self.code_pool.get_all_code(frequency=self.update_frequency, return_type=list)
         error_code_list = []
         code_list = tqdm(code_list)
         for code in code_list:
@@ -130,8 +134,8 @@ class AshareDataUpdate(DataUpdateBase):
 
     def _update_relativity_analyze_data(self):
         def analyze_single_stock(_code):
-            datastruct = data_server.add_data(_code)
-            basic_finan_data = data_server.get_basic_finance_data(_code)
+            datastruct = data_server.get_kdata(_code)
+            basic_finan_data = data_server.get_basic_financial_data(_code)
             strategy = Relativity(code=_code, local_data=datastruct, local_basic_finance_data=basic_finan_data)
             score = strategy.analyze_score()
             if score is not None:
@@ -157,8 +161,8 @@ class AshareDataUpdate(DataUpdateBase):
                                                             start_time=tmp_start_time, end_time=tmp_end_time)
             code_list = []
             for code in tmp_code_list:
-                if code.market in (Market.Ashare.MarketSH.STOCK, Market.Ashare.MarketSZ.STOCK,
-                                   Market.Ashare.MarketSH.KCB, Market.Ashare.MarketSZ.CYB):
+                if code.market in (MarketType.Ashare.SH.STOCK, MarketType.Ashare.SZ.STOCK,
+                                   MarketType.Ashare.SH.KCB, MarketType.Ashare.SZ.CYB):
                     code_list.append(code)
             code_list = tqdm(code_list)
             records_list = []
@@ -172,7 +176,7 @@ class AshareDataUpdate(DataUpdateBase):
                     logger.error("Relativity分析 {} {} 时出现错误，详细信息: {}{}".format(_date, code.code, e.__class__, e))
 
             result_df = pd.DataFrame.from_records(records_list)
-            store_relativity_score_data_to_hdf5(result_df, market=Market.Ashare)
+            store_relativity_score_data_to_hdf5(result_df, market=MarketType.Ashare)
             logger.success("更新 {} 的Relativity Analyze数据成功!".format(_date))
 
     def _update_blocks_score_data(self):
@@ -209,13 +213,13 @@ class AshareDataUpdate(DataUpdateBase):
         try:
             blocks_data = self.code_pool.get_blocks_data()
             sk = self.local_ds.sk_client().init_socket()
-            data_df = self.local_ds.fetch_relativity_score_data(sk, market=Market.Ashare)
+            data_df = self.local_ds.fetch_relativity_score_data(sk, market=MarketType.Ashare)
         except Exception as e:
             logger.error("预读取数据失败，详细信息: {}{}".format(e.__class__, e))
         else:
             for d in self.analyze_date:
                 res = analyze_single_date(d)
-                store_blocks_score_data_to_hdf5(res, market=Market.Ashare)
+                store_blocks_score_data_to_hdf5(res, market=MarketType.Ashare)
                 logger.success("更新 {} A股blocks_score数据成功!".format(d))
 
     @staticmethod
@@ -227,7 +231,7 @@ class AshareDataUpdate(DataUpdateBase):
             logger.error("获取A股板块数据失败! 详细信息见日志文件")
         else:
             try:
-                store_blocks_data(res_dict, Market.Ashare)
+                store_blocks_data(res_dict, MarketType.Ashare)
             except Exception as e:
                 logger.error("储存A股板块数据失败! 详细信息: {}{}".format(e.__class__, e))
             else:
@@ -241,7 +245,7 @@ class AshareDataUpdate(DataUpdateBase):
             logger.error("获取A股股票列表数据失败! 详细信息见日志文件")
         else:
             try:
-                store_code_list_stock(self.code_pool.code_df, Market.Ashare)
+                store_code_list_stock(self.code_pool.code_df, MarketType.Ashare)
             except Exception as e:
                 logger.error("储存A股股票列表数据失败! 详细信息: {}{}".format(e.__class__, e))
             else:
@@ -256,23 +260,25 @@ class AshareDataUpdate(DataUpdateBase):
             logger.error("获取A股basic_finance数据失败! 详细信息见日志文件")
         else:
             try:
-                store_basic_finance_data(res_df, Market.Ashare)
+                store_basic_finance_data(res_df, MarketType.Ashare)
             except Exception as e:
                 logger.error("储存A股basic_finance数据失败! 详细信息: {}{}".format(e.__class__, e))
             else:
                 logger.success("更新A股basic_finance数据成功!")
 
 
-def config_update_obj(_update_obj: DataUpdateBase, _update_type: list, codes, analyze_date):
+def config_update_obj(_update_obj: DataUpdateBase, _update_type: list, codes, analyze_date, _update_frequency):
     _update_obj.config_update_type(_update_type)
     _update_obj.config_codes(codes)
     _update_obj.config_analyze_date(analyze_date)
+    _update_obj.config_update_frequency(_update_frequency)
 
 
 if __name__ == '__main__':
     update_obj_list = []
     market = args.market if isinstance(args.market, list) else [args.market]
     update_type = args.update if isinstance(args.update, list) else [args.update]
+    update_frequencys = args.frequency if isinstance(args.frequency, list) else [args.frequency]
     if args.code is None:
         update_code = None
     else:
@@ -293,7 +299,7 @@ if __name__ == '__main__':
             else:
                 logger.info("{} 是A股交易日，开始更新数据".format(today_date))
             tmp_obj = AshareDataUpdate()
-            config_update_obj(tmp_obj, update_type, update_code, update_dates)
+            config_update_obj(tmp_obj, update_type, update_code, update_dates, update_frequencys)
             update_obj_list.append(tmp_obj)
         else:
             logger.error("输入错误的参数-m {}".format(args.market))

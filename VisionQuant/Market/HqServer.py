@@ -2,7 +2,7 @@ import pickle
 import struct
 import socketserver
 
-from VisionQuant.DataCenter.DataServer import DataServer
+from VisionQuant.DataCenter.DataServer import DataServer, KDataServer
 from VisionQuant.utils.Params import REQUEST_HEADER_LEN, REQUEST_HEAD_KDATA, REQUEST_HEAD_DATASERVER_SETTINGS, \
     REQUEST_HEAD_BASIC_FINANCE_DATA, HQSERVER_HOST, HQSERVER_PORT
 
@@ -38,14 +38,14 @@ class HqServerHandler(socketserver.BaseRequestHandler):
                     raise RequestBodyRecvFailed("接收数据体失败服务器断开连接")
                 if head == REQUEST_HEAD_KDATA:
                     code = pickle.loads(body_buf)
-                    kdata = data_server.get_data(code)
+                    kdata = data_server.get_kdata(code)
                     response_body = pickle.dumps(kdata)
                     response_header = struct.pack('>HII', REQUEST_HEAD_KDATA, 102400, len(response_body))
                     self.request.sendall(response_header)
                     self.request.sendall(response_body)
                 elif head == REQUEST_HEAD_BASIC_FINANCE_DATA:
                     code = pickle.loads(body_buf)
-                    fian_data = data_server.get_basic_finance_data(code)
+                    fian_data = data_server.get_basic_financial_data(code)
                     response_body = pickle.dumps(fian_data)
                     response_header = struct.pack('>HII', REQUEST_HEAD_BASIC_FINANCE_DATA, 10240, len(response_body))
                     self.request.sendall(response_header)

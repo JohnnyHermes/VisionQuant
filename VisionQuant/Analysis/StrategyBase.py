@@ -22,8 +22,8 @@ class StrategyBase:
         else:
             return self.hq_client.get_kdata(self.code)
 
-    def get_kdata(self, period='5'):
-        return self.get_data().get_kdata(period)
+    def get_kdata(self, freq):
+        return self.get_data().get_kdata(freq)
 
     def get_basic_finance_data(self):
         if self.basic_finance_data is not None:

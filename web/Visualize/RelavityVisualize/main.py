@@ -16,9 +16,10 @@ from bokeh import events
 from VisionQuant.utils import TimeTool
 from VisionQuant.utils.Code import Code
 from VisionQuant.DataCenter.DataFetch import DEFAULT_ASHARE_DATA_SOURCE
-from VisionQuant.Analysis.Relativity.Relativity import Relativity
+from VisionQuant.Analysis.Relativity.Relativity import Relativity, ANALYZE_FREQ
 from VisionQuant.Analysis.Relativity import relativity_cy
 import Draw
+
 
 curdoc().theme = 'dark_minimal'
 MAIN_WEIGHT = 1700
@@ -116,6 +117,7 @@ def get_analyze_data(_code):
                 new_index = time_series.index(drawing_data['save_time']['time'])
                 offset = new_index - drawing_data['save_time']['index']
             except ValueError:
+                print("未找到时间")
                 offset = 0
             for line_x in drawing_data['line_data']['xs']:
                 line_x[0] += offset
@@ -924,10 +926,9 @@ def update(from_auto_refresh=False):
     else:
         new_code = code.code
     end_time = TimeTool.get_now_time('datetime')
-    start_time = TimeTool.get_start_time(end_time, days=365 + 365)
+    start_time = TimeTool.get_start_time(end_time, days=365+365)
     try:
-        code = Code(new_code, '5', start_time, end_time=end_time,
-                    data_source=DEFAULT_ASHARE_DATA_SOURCE)
+        code = Code(new_code, frequency=ANALYZE_FREQ, start_time=start_time, end_time=end_time)
     except Exception as e:
         print(e)
         message_show.text = "输入代码错误！"
@@ -1005,9 +1006,8 @@ def get_chart():
 
 
 end_time = TimeTool.get_now_time(return_type='datetime')
-start_time = TimeTool.get_start_time(end_time, days=365 + 365)
-code = Code('999999', '5', start_time, end_time=end_time,
-            data_source=DEFAULT_ASHARE_DATA_SOURCE)
+start_time = TimeTool.get_start_time(end_time, days=365+365)
+code = Code('999999', frequency=ANALYZE_FREQ, start_time=start_time, end_time=end_time)
 
 get_analyze_data(code)
 create_main_ax()

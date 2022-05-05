@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from VisionQuant.DataCenter.DataServer import DataServer
 from VisionQuant.DataCenter.DataFetch import DataSource, FetchDataFailed, AshareBasicDataAPI
-from VisionQuant.utils.Params import Market
+from VisionQuant.utils.Params import MarketType
 from VisionQuant.Analysis.Relativity.Relativity import Relativity, RELATIVITY_MAX_LEVEL
 from VisionQuant.DataCenter.CodePool import AshareCodePool
 from VisionQuant.DataCenter.DataStore import store_code_list_stock, store_blocks_data, \
@@ -69,9 +69,9 @@ if __name__ == '__main__':
                 sys.exit()
             else:
                 if 'relativity' in repair_type:
-                    repair_relativity_data(Market.Ashare, repair_dates)
+                    repair_relativity_data(MarketType.Ashare, repair_dates)
                 if 'blocks_score' in repair_type:
-                    repair_blocks_score_data(Market.Ashare, repair_dates)
+                    repair_blocks_score_data(MarketType.Ashare, repair_dates)
         else:
             logger.error("输入错误的参数-m {}".format(args.market))
             raise ValueError("未知的市场参数！目前支持: Ashare")

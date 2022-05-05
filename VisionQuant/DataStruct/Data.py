@@ -3,6 +3,9 @@ import pandas as pd
 from VisionQuant.utils import TimeTool
 from copy import deepcopy
 from pandas import concat
+from functools import lru_cache
+
+from VisionQuant.utils.Params import Freq
 
 
 class KDataStruct:
@@ -12,6 +15,7 @@ class KDataStruct:
         else:
             self.data = kdata_df
 
+    @lru_cache()
     def __len__(self):
         return len(self.data)
 
@@ -47,30 +51,35 @@ class KDataStruct:
         new_KDataStruct = KDataStruct(out_df)
         return new_KDataStruct
 
+    @lru_cache()
     def get_last_bar(self):
         if len(self) == 0:
             return None
         return self.data.tail(1)
 
+    @lru_cache()
     def get_first_bar(self):
         if len(self) == 0:
             return None
         return self.data.head(1)
 
+    @lru_cache()
     def get_last_time(self):
         line = self.get_last_bar()
         if line is not None:
             return TimeTool.time_standardization(line.time.values[0])
         else:
-            return TimeTool.time_standardization('2000-01-01 09:00:00')
+            return None
 
+    @lru_cache()
     def get_start_time(self):
         line = self.get_first_bar()
         if line is not None:
             return TimeTool.time_standardization(line.time.values[0])
         else:
-            return TimeTool.time_standardization('2000-01-01 09:00:00')
+            return None
 
+    @lru_cache()
     def get_last_index(self):
         line = self.get_last_bar()
         if line is not None:
@@ -78,6 +87,7 @@ class KDataStruct:
         else:
             return None
 
+    @lru_cache()
     def get_last_price(self):
         line = self.get_last_bar()
         if line is not None:
@@ -85,6 +95,7 @@ class KDataStruct:
         else:
             return None
 
+    @lru_cache()
     def get_last_bar_values(self):
         line = self.get_last_bar()
         if line is not None:
@@ -98,6 +109,7 @@ class KDataStruct:
         self.data.drop(self.data[self.data['amount'] < 0.001].index, inplace=True)
         self.data.reset_index(drop=True, inplace=True)
 
+    @lru_cache(maxsize=128)
     def convert_index_time(self, index=None, time=None):
         if len(self) == 0:
             print('数据为空')
@@ -117,6 +129,13 @@ class KDataStruct:
         else:
             self.data = new_kdata
             self.data = self.data.reset_index(drop=True)
+
+        self.__len__.cache_clear()
+        self.get_last_bar.cache_clear()
+        self.get_last_index.cache_clear()
+        self.get_last_bar_values.cache_clear()
+        self.get_last_time.cache_clear()
+        self.get_last_price.cache_clear()
         return self
 
     def repair(self, new_kdata):
@@ -124,6 +143,9 @@ class KDataStruct:
             return self
         tmp_ori_data = self.data[self.data['time'] > new_kdata['time'].values[len(new_kdata['time']) - 1]]
         self.data = concat([new_kdata, tmp_ori_data])
+        self.__len__.cache_clear()
+        self.get_first_bar.cache_clear()
+        self.get_start_time.cache_clear()
         return self
 
 
@@ -137,17 +159,59 @@ class BaseDataStruct:
     def get_kdata(self, frequency):
         return self.kdata[frequency]
 
-    def add_data(self, kdata_dict):
+    def add_kdata(self, kdata_dict):
         for frequency, kdata_df in kdata_dict.items():
             self.kdata[frequency] = KDataStruct(kdata_df)
 
     def get_freqs(self):
         return self.kdata.keys()
 
-    def filter(self, key='index', start=0, end=-1, is_reset_index=True):
+    def get_last_time(self, freqs):
+        availavle_freqs = self.get_freqs()
+        if isinstance(freqs, list):
+            res = dict()
+            for freq in freqs:
+                if freq in availavle_freqs:
+                    res[freq] = self.kdata[freq].get_last_time()
+                else:
+                    raise ValueError('DataStruct中不含该周期的数据')
+            return res
+        else:
+            if freqs in availavle_freqs:
+                return self.kdata[freqs].get_last_time()
+            else:
+                raise ValueError('DataStruct中不含该周期的数据')
+
+    def get_start_time(self, freqs):
+        availavle_freqs = self.get_freqs()
+        if isinstance(freqs, list):
+            res = dict()
+            for freq in freqs:
+                if freq in availavle_freqs:
+                    res[freq] = self.kdata[freq].get_start_time()
+                else:
+                    raise ValueError('DataStruct中不含该周期的数据')
+            return res
+        else:
+            if freqs in availavle_freqs:
+                return self.kdata[freqs].get_start_time()
+            else:
+                raise ValueError('DataStruct中不含该周期的数据')
+
+    def filter(self, key='index', start=0, end=-1, is_reset_index=True, freqs=None):
+        if freqs is not None and not isinstance(freqs,list):
+            freqs = [freqs]
         tmp_data = self.copy()
+
         for freq, kdata in tmp_data.kdata.items():
             tmp_data.kdata[freq] = kdata.filter(key=key, start=start, end=end, is_reset_index=is_reset_index)
+        if freqs is not None:
+            del_freqs = []
+            for freq, kdata in tmp_data.kdata.items():
+                if freq not in freqs:
+                    del_freqs.append(freq)
+            for freq in del_freqs:
+                del tmp_data.kdata[freq]
         return tmp_data
 
     def remove_zero_volume(self):

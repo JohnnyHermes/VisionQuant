@@ -13,7 +13,7 @@ from VisionQuant.DataCenter.DataFetch import DataSource
 from VisionQuant.Engine.AnalyzeEngine import AnalyzeEngine
 from VisionQuant.utils import TimeTool
 from VisionQuant.utils.Code import Code
-from VisionQuant.utils.Params import Market
+from VisionQuant.utils.Params import MarketType, Freq
 
 nptype_point = np.dtype([('index', np.uint32), ('price', np.float64), ('max_level', np.uint8), ('gain', np.uint16)])
 nptype_time_grav = np.dtype(
@@ -26,6 +26,7 @@ save_dir = 'E:/Onedrive/策略log/Relativity/'
 from VisionQuant.Analysis.Relativity import relativity_cy
 
 RELATIVITY_MAX_LEVEL = 7
+ANALYZE_FREQ = Freq.MIN1
 
 
 def get_peaks(zcyl_list):
@@ -74,8 +75,8 @@ class Relativity(StrategyBase):
         t = time.perf_counter()
         self.analyze_flag = False
         data = self.get_data()
-        self.kdata = data.get_kdata('5')
-        self.kdata.remove_zero_volume()  # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
+        self.kdata = data.get_kdata(ANALYZE_FREQ)
+        # self.kdata.remove_zero_volume()  # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
         basic_finance_data = self.get_basic_finance_data()
         if basic_finance_data is None:
             all_capital = self.kdata.data['volume'].sum() / 9
@@ -90,7 +91,7 @@ class Relativity(StrategyBase):
         high = np.array(self.kdata.data['high'])
         low = np.array(self.kdata.data['low'])
         volume = np.array(self.kdata.data['volume'])
-        if self.code.market in [Market.Ashare.MarketSH.ETF, Market.Ashare.MarketSZ.ETF]:
+        if self.code.market in [MarketType.Ashare.SH.ETF, MarketType.Ashare.SZ.ETF]:
             self.min_step = 0.001
         else:
             self.min_step = 0.01
@@ -224,14 +225,14 @@ class Relativity(StrategyBase):
             # val[minus_list] *= -1
             # mean_allvol = (line_dist['buyvol'] + line_dist['sellvol']) / (
             #         line_dist['sellindex'] + line_dist['buyindex'])
-            #mean_allvol = np.array(pd.Series(time_grav_dict[0]['buyvol']+time_grav_dict[0]['sellvol'] / 2).ewm(span=3 ** level+1, min_periods=1).mean())
-            #mean_allvol = np.array(pd.Series((time_grav_dict[0]['buyvol']+time_grav_dict[0]['sellvol']) / 2).rolling(window=3 ** level * 2, min_periods=1).mean())
+            # mean_allvol = np.array(pd.Series(time_grav_dict[0]['buyvol']+time_grav_dict[0]['sellvol'] / 2).ewm(span=3 ** level+1, min_periods=1).mean())
+            # mean_allvol = np.array(pd.Series((time_grav_dict[0]['buyvol']+time_grav_dict[0]['sellvol']) / 2).rolling(window=3 ** level * 2, min_periods=1).mean())
             # line_dist['buyindex'][np.where(line_dist['buyindex'] == 0)] = 1
             # line_dist['sellindex'][np.where(line_dist['sellindex'] == 0)] = 1
             # mean_buyvol = line_dist['buyvol'] / line_dist['buyindex']
             # mean_sellvol = line_dist['sellvol'] / line_dist['sellindex']
-            tmp_mean_buyvol = np.array(buy_volume_series.ewm(span=3 ** level+1, min_periods=1).mean())
-            tmp_mean_sellvol = np.array(sell_volume_series.ewm(span=3 ** level+1, min_periods=1).mean())
+            tmp_mean_buyvol = np.array(buy_volume_series.ewm(span=3 ** level + 1, min_periods=1).mean())
+            tmp_mean_sellvol = np.array(sell_volume_series.ewm(span=3 ** level + 1, min_periods=1).mean())
             mean_buyvol = np.zeros(len(buy_index) + len(sell_index))
             mean_sellvol = np.zeros(len(buy_index) + len(sell_index))
             if flag:
@@ -247,7 +248,6 @@ class Relativity(StrategyBase):
                 mean_buyvol[1::2] = tmp_mean_buyvol
                 mean_buyvol[2::2] = mean_buyvol[1:-1:2]
                 mean_buyvol[0] = mean_buyvol[1]
-
 
             # mean_buyvol = np.array(pd.Series(time_grav_dict[0]['buyvol']).rolling(window=3 ** level * 2, min_periods=1).mean())
             # mean_sellvol = np.array(pd.Series(time_grav_dict[0]['sellvol']).rolling(window=3 ** level * 2, min_periods=1).mean())
@@ -343,7 +343,7 @@ class Relativity(StrategyBase):
         # t = time.perf_counter()
         high = np.array(self.kdata.data['high'])
         low = np.array(self.kdata.data['low'])
-        if self.code.market in [Market.Ashare.MarketSH.ETF, Market.Ashare.MarketSZ.ETF]:
+        if self.code.market in [MarketType.Ashare.SH.ETF, MarketType.Ashare.SZ.ETF]:
             self.min_step = 0.001
         else:
             self.min_step = 0.01

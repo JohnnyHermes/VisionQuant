@@ -1,17 +1,20 @@
 from VisionQuant.utils import CfgTool
+from enum import Enum
 
 TDX_DIR = CfgTool.get_cfg('DataSource', 'tdx_dir')
 LOCAL_DIR = CfgTool.get_cfg('DataSource', 'local_dir')
 WEB_DIR = CfgTool.get_cfg('DataSource', 'web_dir')
 REMOTE_ADDR = CfgTool.get_cfg('DataSource', 'remote_addr')
-_DEFAULT_ASHARE_LOCAL_DATASOURCE = CfgTool.get_cfg('DataSource', 'ashare_local_source')
-_DEFAULT_ASHARE_LIVE_DATASOURCE = CfgTool.get_cfg('DataSource', 'ashare_live_source')
-_DEFAULT_CODELIST_DATASOURCE = CfgTool.get_cfg('DataSource', 'codelist_source')
-_DEFAULT_BLOCKS_DATA_DATASOURCE = CfgTool.get_cfg('DataSource', 'blocks_data_source')
-_DEFAULT_BASIC_FINANCE_DATA_DATASOURCE = CfgTool.get_cfg('DataSource', 'basic_finance_data_source')
+
+ASHARE_LOCAL_DATASOURCE = CfgTool.get_cfg('DataSource', 'ashare_local_source')
+ASHARE_LIVE_DATASOURCE = CfgTool.get_cfg('DataSource', 'ashare_live_source')
+CODELIST_DATASOURCE = CfgTool.get_cfg('DataSource', 'codelist_source')
+BLOCKS_DATA_DATASOURCE = CfgTool.get_cfg('DataSource', 'blocks_data_source')
+BASIC_FINANCE_DATA_DATASOURCE = CfgTool.get_cfg('DataSource', 'basic_finance_data_source')
+
 HDF5_COMPLIB = 'blosc:zstd'
 HDF5_COMP_LEVEL = 5
-DATASERVER_MAX_COUNT = int(CfgTool.get_cfg('DataServer', 'max_count'))
+DATASERVER_MIN_FREE_MEM = int(CfgTool.get_cfg('DataServer', 'min_free_mem'))
 
 HQSERVER_HOST = CfgTool.get_cfg('HqServer', 'host')
 HQSERVER_PORT = int(CfgTool.get_cfg('HqServer', 'port'))
@@ -28,9 +31,9 @@ Market Type 市场类型
 """
 
 
-class Market(object):
+class MarketType(object):
     class Ashare(object):
-        class MarketSH(object):
+        class SH(Enum):
             STOCK = 0
             KCB = 2
             INDEX = 4
@@ -38,7 +41,7 @@ class Market(object):
             BOND = 8
             OTHERS = 10
 
-        class MarketSZ(object):
+        class SZ(Enum):
             STOCK = 1
             CYB = 3
             INDEX = 5
@@ -46,19 +49,18 @@ class Market(object):
             BOND = 9
             OTHERS = 10
 
-        class MarketBJ(object):
-            stock = 11
+        class BJ(Enum):
+            STOCK = 11
 
     @staticmethod
     def is_ashare(market):
-        if market in [Market.Ashare, Market.Ashare.MarketSH, Market.Ashare.MarketSZ, Market.Ashare.MarketSZ.STOCK,
-                      Market.Ashare.MarketSZ.CYB, Market.Ashare.MarketSZ.ETF, Market.Ashare.MarketSZ.INDEX,
-                      Market.Ashare.MarketSZ.BOND, Market.Ashare.MarketSH.STOCK, Market.Ashare.MarketSH.KCB,
-                      Market.Ashare.MarketSH.ETF, Market.Ashare.MarketSH.INDEX, Market.Ashare.MarketSH.BOND]:
+        if market in [MarketType.Ashare, MarketType.Ashare.SH, MarketType.Ashare.SZ, MarketType.Ashare.SZ.STOCK,
+                      MarketType.Ashare.SZ.CYB, MarketType.Ashare.SZ.ETF, MarketType.Ashare.SZ.INDEX,
+                      MarketType.Ashare.SZ.BOND, MarketType.Ashare.SH.STOCK, MarketType.Ashare.SH.KCB,
+                      MarketType.Ashare.SH.ETF, MarketType.Ashare.SH.INDEX, MarketType.Ashare.SH.BOND]:
             return 1
         else:
             return 0
-
 
 class Future(object):
     pass
@@ -73,7 +75,7 @@ K线周期
 """
 
 
-class Freq(object):
+class Freq(Enum):
     MIN1 = '1'
     MIN5 = '5'
     MIN15 = '15'

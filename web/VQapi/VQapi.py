@@ -5,7 +5,7 @@ import json
 from VisionQuant.utils.Code import Code
 from VisionQuant.utils import TimeTool, JsonTool
 from VisionQuant.DataCenter.DataFetch import DataSource
-from VisionQuant.utils.Params import Market
+from VisionQuant.utils.Params import MarketType
 from VisionQuant.Market.HqClient import HqClient
 
 hq_client = HqClient()
@@ -17,10 +17,10 @@ data_source = DataSource.Local.Default
 print("正在预加载Ashare Analyze数据...")
 sk = data_source.sk_client().init_socket()
 ashare_relativity_score_resp = JsonTool.df_to_json(DataSource.Local.Default.fetch_relativity_score_data(
-    sk, market=Market.Ashare), orient='split')
+    sk, market=MarketType.Ashare), orient='split')
 
 ashare_blocks_score_resp = JsonTool.df_to_json(DataSource.Local.Default.fetch_blocks_score_data(
-    sk, market=Market.Ashare), orient='split')
+    sk, market=MarketType.Ashare), orient='split')
 print("预加载Ashare Analyze数据完成！")
 
 
@@ -51,7 +51,7 @@ def fetch_kdata(code: str, freq: str, market: int, st: str, et: str):
 @app.get("/codelist/")
 def fetch_codelist(market: str):
     if market == 'Ashare':
-        ashare_codelist = data_source.fetch_codelist(sk, market=Market.Ashare)
+        ashare_codelist = data_source.fetch_codelist(sk, market=MarketType.Ashare)
         resp = JsonTool.df_to_json(ashare_codelist, orient='split')
         return {'msg': 'success', 'data': resp}
     else:
@@ -61,7 +61,7 @@ def fetch_codelist(market: str):
 @app.get("/blockdata/")
 def fetch_blocks_data(market: str):
     if market == 'Ashare':
-        blocksdata = data_source.fetch_blocks_data(sk, market=Market.Ashare)
+        blocksdata = data_source.fetch_blocks_data(sk, market=MarketType.Ashare)
         resp = json.dumps(blocksdata)
         return {'msg': 'success', 'data': resp}
     else:
@@ -93,7 +93,7 @@ def fetch_blocks_score_data(market: str):
 @app.get("/financedata/basic/")
 def fetch_basic_finance_data(market: str):
     if market == 'Ashare':
-        data = data_source.fetch_basic_finance_data(sk, market=Market.Ashare)
+        data = data_source.fetch_basic_finance_data(sk, market=MarketType.Ashare)
         resp = JsonTool.df_to_json(data, orient='split')
         return {'msg': 'success', 'data': resp}
     else:

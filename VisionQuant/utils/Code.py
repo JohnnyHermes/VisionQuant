@@ -1,9 +1,9 @@
 from VisionQuant.utils import TimeTool
-from VisionQuant.utils.Params import Market, Freq
+from VisionQuant.utils.Params import MarketType, Freq
 import copy
 
 
-def determine_market(code: str, selected_market=None):
+def determine_market(code: str, selected_market=None, return_type=MarketType):
     """
         判断股票ID对应的证券市场匹配规则
         ['88']开头的为上海指数
@@ -35,72 +35,92 @@ def determine_market(code: str, selected_market=None):
                '399001'深圳成指, '399006'创业板指, '399905'中证500
         重要指数: '999999'上证指数  '000688'科创50 '000300'沪深300 '000016'上证50 '000011'上海ETF指数
                  '399001'深圳成指 '399006'创业板指 '399905'中证500 '399673'创业板50 '399306'深圳ETF指数
+        :param return_type:
         :param selected_market: 当market参数为None时，默认不知道代码属于哪个市场，因此A股'00'将被认为是深A
         :param code:
         :return market_type
     """
 
     ch = code[0:2]
-    if selected_market is Market.Ashare.MarketSH:
+    if selected_market is MarketType.Ashare.SH:
         if ch == '60':
-            return Market.Ashare.MarketSH.STOCK
+            res = MarketType.Ashare.SH.STOCK
         elif ch == '68':
-            return Market.Ashare.MarketSH.KCB
+            res= MarketType.Ashare.SH.KCB
         elif ch == '88':
-            return Market.Ashare.MarketSH.INDEX
+            res= MarketType.Ashare.SH.INDEX
         elif code in ['000688', '000300', '000016', '000011', '999999']:
-            return Market.Ashare.MarketSH.INDEX
+            res= MarketType.Ashare.SH.INDEX
         elif ch in ['51', '58']:
-            return Market.Ashare.MarketSH.ETF
+           res= MarketType.Ashare.SH.ETF
         elif ch == '11':
-            return Market.Ashare.MarketSH.BOND
+            res= MarketType.Ashare.SH.BOND
         else:
-            return Market.Ashare.MarketSH.OTHERS
-    elif selected_market is Market.Ashare.MarketSZ:
+            res= MarketType.Ashare.SH.OTHERS
+    elif selected_market is MarketType.Ashare.SZ:
         if ch == '00':
-            return Market.Ashare.MarketSZ.STOCK
+            res= MarketType.Ashare.SZ.STOCK
         elif ch == '30':
-            return Market.Ashare.MarketSZ.CYB
+            res= MarketType.Ashare.SZ.CYB
         elif code in ['399001', '399006', '399905', '399673', '399306']:
-            return Market.Ashare.MarketSZ.INDEX
+           res= MarketType.Ashare.SZ.INDEX
         elif ch == '15':
-            return Market.Ashare.MarketSZ.ETF
+            res= MarketType.Ashare.SZ.ETF
         elif ch == '12':
-            return Market.Ashare.MarketSZ.BOND
+            res= MarketType.Ashare.SZ.BOND
         else:
-            return Market.Ashare.MarketSZ.OTHERS
+            res= MarketType.Ashare.SZ.OTHERS
     else:
         if ch == '60':
-            return Market.Ashare.MarketSH.STOCK
+            res= MarketType.Ashare.SH.STOCK
         elif ch == '00':
-            return Market.Ashare.MarketSZ.STOCK
+            res= MarketType.Ashare.SZ.STOCK
         elif ch == '30':
-            return Market.Ashare.MarketSZ.CYB
+            res= MarketType.Ashare.SZ.CYB
         elif ch == '68':
-            return Market.Ashare.MarketSH.KCB
+            res= MarketType.Ashare.SH.KCB
         elif ch in ['00', '88']:
-            return Market.Ashare.MarketSH.INDEX
+            res= MarketType.Ashare.SH.INDEX
         elif ch == '39':
-            return Market.Ashare.MarketSZ.INDEX
+            res= MarketType.Ashare.SZ.INDEX
         elif ch in ['51', '58']:
-            return Market.Ashare.MarketSH.ETF
+            res= MarketType.Ashare.SH.ETF
         elif ch == '15':
-            return Market.Ashare.MarketSZ.ETF
+            res= MarketType.Ashare.SZ.ETF
         elif ch == '11':
-            return Market.Ashare.MarketSH.BOND
+            res= MarketType.Ashare.SH.BOND
         elif ch == '12':
-            return Market.Ashare.MarketSZ.BOND
+            res= MarketType.Ashare.SZ.BOND
         elif code == '999999':
-            return Market.Ashare.MarketSH.INDEX
+            res= MarketType.Ashare.SH.INDEX
         else:
-            return Market.Ashare.MarketSH.OTHERS
+            res= MarketType.Ashare.SH.OTHERS
+
+    if return_type == MarketType:
+        return res
+    else:
+        return res.value
+
+
+def select_markettype(i):
+    if i < 10:
+        if i % 2 == 0:
+            return MarketType.Ashare.SH(i)
+        else:
+            return MarketType.Ashare.SZ(i)
+    elif i == 10:
+        return MarketType.Ashare.SH.OTHERS
+    elif i == 11:
+        return MarketType.Ashare.BJ.STOCK
+    else:
+        raise ValueError
 
 
 def market_str_transform(market_str):
     if market_str in ['sh', 'SH']:
-        return Market.Ashare.MarketSH
+        return MarketType.Ashare.SH
     elif market_str in ['sz', 'SZ']:
-        return Market.Ashare.MarketSZ
+        return MarketType.Ashare.SZ
 
 
 def code_transform(code: str):
@@ -127,15 +147,18 @@ def code_transform(code: str):
 
 
 class Code:
-    def __init__(self, code, frequency=None, start_time=None, end_time=None,
-                 data_source: dict = None, name=None, market=None):
+    def __init__(self, code: str, name: str = None, market: MarketType = None, frequency = None,
+                 start_time=None, end_time=None):
         self.code, _market = code_transform(code)
         if name is not None:
             self.name = name
         else:
             self.name = 'null'
         if market is not None:
-            self.market = market
+            if isinstance(market, int):
+                self.market = select_markettype(market)
+            else:
+                self.market = market
         else:
             self.market = determine_market(self.code, _market)
         if frequency is not None:
@@ -150,21 +173,6 @@ class Code:
             self.end_time = TimeTool.time_standardization(end_time)
         else:
             self.end_time = TimeTool.get_now_time()
-        if data_source is not None:
-            if 'local' in data_source:
-                self.data_source_local = data_source['local']
-            else:
-                from VisionQuant.DataCenter.DataFetch import DEFAULT_ASHARE_LOCAL_DATASOURCE
-                self.data_source_local = DEFAULT_ASHARE_LOCAL_DATASOURCE
-            if 'live' in data_source:
-                self.data_source_live = data_source['live']
-            else:
-                from VisionQuant.DataCenter.DataFetch import DEFAULT_ASHARE_LIVE_DATASOURCE
-                self.data_source_live = DEFAULT_ASHARE_LIVE_DATASOURCE
-        else:
-            from VisionQuant.DataCenter.DataFetch import DEFAULT_ASHARE_DATA_SOURCE
-            self.data_source_local = DEFAULT_ASHARE_DATA_SOURCE['local']
-            self.data_source_live = DEFAULT_ASHARE_DATA_SOURCE['live']
 
     def copy(self):
         return copy.deepcopy(self)

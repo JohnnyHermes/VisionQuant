@@ -4,7 +4,7 @@ from bokeh.models import FixedTicker
 from bokeh.io import curdoc, export
 
 from VisionQuant.DataCenter.DataFetch import DataSource
-from VisionQuant.utils.Params import Market
+from VisionQuant.utils.Params import MarketType
 
 analyze_data_source = DataSource.Local.VQapi
 
@@ -15,7 +15,7 @@ UNIT_WIDTH = 60
 UNIT_HEIGHT = 60
 
 
-def get_blocks_score_data(market=Market.Ashare):
+def get_blocks_score_data(market=MarketType.Ashare):
     sk = analyze_data_source.sk_client().init_socket()
     res_data = analyze_data_source.fetch_blocks_score_data(sk, market=market)
     return res_data

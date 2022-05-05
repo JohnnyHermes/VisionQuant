@@ -8,7 +8,7 @@ from tqdm import tqdm
 from VisionQuant.DataCenter.DataServer import DataServer
 from VisionQuant.DataCenter.DataStore import store_kdata_to_hdf5
 from VisionQuant.DataCenter.DataFetch import DataSource
-from VisionQuant.utils.Params import Market
+from VisionQuant.utils.Params import MarketType
 from VisionQuant.DataCenter.CodePool import AshareCodePool
 from VisionQuant.DataCenter.DataStore import store_code_list_stock, store_blocks_data, store_basic_finance_data
 
@@ -442,7 +442,7 @@ if __name__ == '__main__':
 
     # # 更新板块数据
     blocks_data = update_ashare_blocks()
-    store_blocks_data(blocks_data, Market.Ashare)
+    store_blocks_data(blocks_data, MarketType.Ashare)
     # basic_finance_data = update_basic_finance_data()
     # store_basic_finance_data(basic_finance_data, Market.Ashare)
 

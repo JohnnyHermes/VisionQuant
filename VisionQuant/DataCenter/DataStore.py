@@ -2,16 +2,16 @@ import pandas as pd
 import json
 from path import Path
 from tables.exceptions import HDF5ExtError
-from VisionQuant.utils.Params import LOCAL_DIR, HDF5_COMP_LEVEL, HDF5_COMPLIB, Market
+from VisionQuant.utils.Params import LOCAL_DIR, HDF5_COMP_LEVEL, HDF5_COMPLIB, MarketType
 from VisionQuant.utils.VQlog import logger
 
 
 def kdata_store_market_transform(_market):
-    if _market in [Market.Ashare.MarketSH, Market.Ashare.MarketSH.STOCK, Market.Ashare.MarketSH.ETF,
-                   Market.Ashare.MarketSH.INDEX, Market.Ashare.MarketSH.KCB]:
+    if _market in [MarketType.Ashare.SH, MarketType.Ashare.SH.STOCK, MarketType.Ashare.SH.ETF,
+                   MarketType.Ashare.SH.INDEX, MarketType.Ashare.SH.KCB]:
         return 'Ashare', 'sh'
-    elif _market in [Market.Ashare.MarketSZ, Market.Ashare.MarketSZ.STOCK, Market.Ashare.MarketSZ.ETF,
-                     Market.Ashare.MarketSZ.INDEX, Market.Ashare.MarketSZ.CYB]:
+    elif _market in [MarketType.Ashare.SZ, MarketType.Ashare.SZ.STOCK, MarketType.Ashare.SZ.ETF,
+                     MarketType.Ashare.SZ.INDEX, MarketType.Ashare.SZ.CYB]:
         return 'Ashare', 'sz'
     else:
         logger.critical("错误的市场类型!")
@@ -19,7 +19,7 @@ def kdata_store_market_transform(_market):
 
 
 def anadata_store_market_transform(_market):
-    if _market is Market.Ashare:
+    if _market is MarketType.Ashare:
         return 'Ashare'
     else:  # todo:增加不同市场类型
         return 'Future'
@@ -44,11 +44,11 @@ def store_kdata_to_hdf5(datastruct):
         for freq in datastruct.get_freqs():
             kdata = datastruct.get_kdata(freq)
             if len(kdata) > 0:
-                store.put(key='_' + freq, value=kdata.data)
+                store.put(key='_' + freq.value, value=kdata.data)
         store.close()
 
 
-def store_relativity_score_data_to_hdf5(result_df, market=Market.Ashare, append=True):
+def store_relativity_score_data_to_hdf5(result_df, market=MarketType.Ashare, append=True):
     try:
         fname = 'relativity_analyze_result.h5'
         fpath = Path('/'.join([LOCAL_DIR, 'AnalyzeData', fname]))
@@ -66,7 +66,7 @@ def store_relativity_score_data_to_hdf5(result_df, market=Market.Ashare, append=
         store.close()
 
 
-def store_blocks_score_data_to_hdf5(result_df, market=Market.Ashare, append=True):
+def store_blocks_score_data_to_hdf5(result_df, market=MarketType.Ashare, append=True):
     try:
         fname = 'blocks_score_analyze_result.h5'
         fpath = Path('/'.join([LOCAL_DIR, 'AnalyzeData', fname]))
@@ -96,14 +96,14 @@ def store_basic_finance_data(df, market):
     df.to_csv(fpath, encoding='utf-8', index=False)
 
 
-def store_blocks_data(data: dict, market=Market.Ashare):
+def store_blocks_data(data: dict, market=MarketType.Ashare):
     market_str = anadata_store_market_transform(market)
     fpath = Path('/'.join([LOCAL_DIR, market_str + '_blocks_data.json']))
     with open(fpath, 'w+') as f:
         json.dump(data, f, indent=4)
 
 
-def store_update_failed_codelist(codelist: list, date: str, market=Market.Ashare):
+def store_update_failed_codelist(codelist: list, date: str, market=MarketType.Ashare):
     market_str = anadata_store_market_transform(market)
     fpath = Path('/'.join([LOCAL_DIR, market_str + '_update_failed_codelist.txt']))
     with open(fpath, 'a+') as f:

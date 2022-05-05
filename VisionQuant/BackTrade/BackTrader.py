@@ -251,7 +251,7 @@ class BackTrader:
 
 if __name__ == '__main__':
     from VisionQuant.DataCenter.CodePool import get_ashare_stock_dict
-    from VisionQuant.utils.Params import Market
+    from VisionQuant.utils.Params import MarketType
     import matplotlib.pyplot as plt
     import gc
     import pickle
@@ -266,8 +266,8 @@ if __name__ == '__main__':
     fig = plt.figure(figsize=(16, 18))
     grid = plt.GridSpec(18, 1)
     for test_code in code_dict.values():
-        if test_code.market in [Market.Ashare.MarketSH.INDEX, Market.Ashare.MarketSH.ETF,
-                                Market.Ashare.MarketSZ.INDEX, Market.Ashare.MarketSZ.ETF]:
+        if test_code.market in [MarketType.Ashare.SH.INDEX, MarketType.Ashare.SH.ETF,
+                                MarketType.Ashare.SZ.INDEX, MarketType.Ashare.SZ.ETF]:
             stop_rate = 0.02
         else:
             stop_rate = 0.03
