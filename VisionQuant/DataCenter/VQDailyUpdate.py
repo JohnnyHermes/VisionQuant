@@ -25,7 +25,7 @@ parser.add_argument('-c', "--code", help="指定要更新的股票代码，主�
 parser.add_argument('-d', "--date", help="指定要分析的日期，主要用于修复分析数据，仅在level=analyze时生效", nargs='+')
 parser.add_argument("-u", "--update", help="要更新的数据", default='all', nargs='+',
                     choices=['basic', 'kdata', 'analyze', 'relativity', 'blocks_score', 'all'])
-parser.add_argument("--frequency", help="要更新的k线数据周期", default='5', nargs='+',
+parser.add_argument("--frequency", help="要更新的k线数据周期", default='1', nargs='+',
                     choices=['1', '5', 'd'])
 args = parser.parse_args()
 

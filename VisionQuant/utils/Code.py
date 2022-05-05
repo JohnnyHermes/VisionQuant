@@ -46,55 +46,55 @@ def determine_market(code: str, selected_market=None, return_type=MarketType):
         if ch == '60':
             res = MarketType.Ashare.SH.STOCK
         elif ch == '68':
-            res= MarketType.Ashare.SH.KCB
+            res = MarketType.Ashare.SH.KCB
         elif ch == '88':
-            res= MarketType.Ashare.SH.INDEX
+            res = MarketType.Ashare.SH.INDEX
         elif code in ['000688', '000300', '000016', '000011', '999999']:
-            res= MarketType.Ashare.SH.INDEX
+            res = MarketType.Ashare.SH.INDEX
         elif ch in ['51', '58']:
-           res= MarketType.Ashare.SH.ETF
+            res = MarketType.Ashare.SH.ETF
         elif ch == '11':
-            res= MarketType.Ashare.SH.BOND
+            res = MarketType.Ashare.SH.BOND
         else:
-            res= MarketType.Ashare.SH.OTHERS
+            res = MarketType.Ashare.SH.OTHERS
     elif selected_market is MarketType.Ashare.SZ:
         if ch == '00':
-            res= MarketType.Ashare.SZ.STOCK
+            res = MarketType.Ashare.SZ.STOCK
         elif ch == '30':
-            res= MarketType.Ashare.SZ.CYB
+            res = MarketType.Ashare.SZ.CYB
         elif code in ['399001', '399006', '399905', '399673', '399306']:
-           res= MarketType.Ashare.SZ.INDEX
+            res = MarketType.Ashare.SZ.INDEX
         elif ch == '15':
-            res= MarketType.Ashare.SZ.ETF
+            res = MarketType.Ashare.SZ.ETF
         elif ch == '12':
-            res= MarketType.Ashare.SZ.BOND
+            res = MarketType.Ashare.SZ.BOND
         else:
-            res= MarketType.Ashare.SZ.OTHERS
+            res = MarketType.Ashare.SZ.OTHERS
     else:
         if ch == '60':
-            res= MarketType.Ashare.SH.STOCK
+            res = MarketType.Ashare.SH.STOCK
         elif ch == '00':
-            res= MarketType.Ashare.SZ.STOCK
+            res = MarketType.Ashare.SZ.STOCK
         elif ch == '30':
-            res= MarketType.Ashare.SZ.CYB
+            res = MarketType.Ashare.SZ.CYB
         elif ch == '68':
-            res= MarketType.Ashare.SH.KCB
+            res = MarketType.Ashare.SH.KCB
         elif ch in ['00', '88']:
-            res= MarketType.Ashare.SH.INDEX
+            res = MarketType.Ashare.SH.INDEX
         elif ch == '39':
-            res= MarketType.Ashare.SZ.INDEX
+            res = MarketType.Ashare.SZ.INDEX
         elif ch in ['51', '58']:
-            res= MarketType.Ashare.SH.ETF
+            res = MarketType.Ashare.SH.ETF
         elif ch == '15':
-            res= MarketType.Ashare.SZ.ETF
+            res = MarketType.Ashare.SZ.ETF
         elif ch == '11':
-            res= MarketType.Ashare.SH.BOND
+            res = MarketType.Ashare.SH.BOND
         elif ch == '12':
-            res= MarketType.Ashare.SZ.BOND
+            res = MarketType.Ashare.SZ.BOND
         elif code == '999999':
-            res= MarketType.Ashare.SH.INDEX
+            res = MarketType.Ashare.SH.INDEX
         else:
-            res= MarketType.Ashare.SH.OTHERS
+            res = MarketType.Ashare.SH.OTHERS
 
     if return_type == MarketType:
         return res
@@ -147,7 +147,7 @@ def code_transform(code: str):
 
 
 class Code:
-    def __init__(self, code: str, name: str = None, market: MarketType = None, frequency = None,
+    def __init__(self, code: str, name: str = None, market: MarketType = None, frequency=None,
                  start_time=None, end_time=None):
         self.code, _market = code_transform(code)
         if name is not None:
@@ -162,9 +162,25 @@ class Code:
         else:
             self.market = determine_market(self.code, _market)
         if frequency is not None:
-            self.frequency = frequency
+            if isinstance(frequency, list):
+                res = []
+                for freq in frequency:
+                    if isinstance(freq, str):
+                        res.append(Freq(freq))
+                    elif isinstance(freq, Freq):
+                        res.append(freq)
+                    else:
+                        raise ValueError("错误的Frequency类型")
+                self.frequency = res
+            else:
+                if isinstance(frequency, str):
+                    self.frequency = Freq(frequency)
+                elif isinstance(frequency, Freq):
+                    self.frequency = frequency
+                else:
+                    raise ValueError("错误的Frequency类型")
         else:
-            self.frequency = Freq.MIN5
+            self.frequency = Freq.MIN1
         if start_time is not None:
             self.start_time = TimeTool.time_standardization(start_time)
         else:
