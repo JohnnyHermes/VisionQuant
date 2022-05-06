@@ -31,7 +31,7 @@ args = parser.parse_args()
 
 today_date = TimeTool.time_to_str(TimeTool.get_now_time(), '%Y-%m-%d')
 
-data_server = DataServer()
+data_server = DataServer(force_live=True)
 
 
 class DataUpdateBase:
