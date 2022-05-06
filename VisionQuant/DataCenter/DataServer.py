@@ -47,6 +47,7 @@ class KDataServer:
             nearest_trade_date_start = TimeTool.get_nearest_trade_date(code.start_time, code.market, flag='start')
             data_last_date = self.data_dict[code_key].get_last_time(code.frequency)
             data_start_date = self.data_dict[code_key].get_start_time(code.frequency)
+            # print("本地数据范围：{} {}".format(data_start_date,data_last_date))
             # print(data_start_date, data_last_date, nearest_trade_date_start, nearest_trade_date_end)
             if isinstance(code.frequency, list):
                 tmp_code = code.copy()

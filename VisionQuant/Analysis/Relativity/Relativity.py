@@ -332,8 +332,8 @@ class Relativity(StrategyBase):
     def analyze_score(self):
         # t = time.perf_counter()
         data = self.get_data()
-        self.kdata = data.get_kdata('5')
-        self.kdata.remove_zero_volume()  # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
+        self.kdata = data.get_kdata(ANALYZE_FREQ)
+        # self.kdata.remove_zero_volume()  # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
         if len(self.kdata) <= 8640:
             print("{}数据太短啦, 开始时间{}, 结束时间{}".format(self.code.code,
                                                    TimeTool.time_to_str(self.kdata.get_start_time()),

@@ -55,7 +55,7 @@ class DataUpdateBase:
         self.analyze_date = dates
 
     def config_update_frequency(self, _update_frequency):
-        self.update_frequency = [Freq(freq) for freq in _update_frequency]
+        self.update_frequency = _update_frequency
 
     def update(self):
         pass
