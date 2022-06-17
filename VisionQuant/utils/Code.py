@@ -1,5 +1,6 @@
 from VisionQuant.utils import TimeTool
 from VisionQuant.utils.Params import MarketType, Freq
+from typing import Union
 import copy
 
 
@@ -147,7 +148,7 @@ def code_transform(code: str):
 
 
 class Code:
-    def __init__(self, code: str, name: str = None, market: MarketType = None, frequency=None,
+    def __init__(self, code: str, name: str = None, market: Union[MarketType, int] = None, frequency=None,
                  start_time=None, end_time=None):
         self.code, _market = code_transform(code)
         if name is not None:

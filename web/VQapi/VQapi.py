@@ -37,8 +37,6 @@ def fetch_kdata(code: str, freq: str, market: int, st: str, et: str):
                     market=market,
                     start_time=st,
                     end_time=et,
-                    data_source={'local': DataSource.Local.Default,
-                                 'live': DataSource.Live.VQtdx}
                     )
     data_struct = hq_client.get_kdata(tmp_code)
     kdata = data_struct.get_kdata(freq).data

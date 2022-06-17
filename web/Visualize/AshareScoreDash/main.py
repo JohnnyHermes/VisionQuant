@@ -22,7 +22,7 @@ from VisionQuant.utils.Params import MarketType
 
 curdoc().theme = 'dark_minimal'
 max_level = 7
-analyze_data_source = DataSource.Local.VQapi
+analyze_data_source = DataSource.Local.Default
 
 score_ax: bokeh.plotting.Figure = None
 score_ax_df: pd.DataFrame

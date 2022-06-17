@@ -55,6 +55,20 @@ def equalize(data, bins=20):
     return out
 
 
+def configure_step(market: MarketType, last_price: float):
+    if market in [MarketType.Ashare.SH.ETF, MarketType.Ashare.SZ.ETF]:
+        return 0.001
+    else:
+        if last_price <= 20:
+            return 0.01
+        elif last_price <= 200:
+            return last_price // 20 * 0.01
+        elif last_price <= 2000:
+            return last_price // 200 * 0.1
+        else:
+            return last_price // 2000 * 1.0
+
+
 class Relativity(StrategyBase):
     def __init__(self, code, local_data=None, local_basic_finance_data=None, show_result=False):
         super().__init__(code, local_data, local_basic_finance_data, show_result)
@@ -91,22 +105,26 @@ class Relativity(StrategyBase):
         high = np.array(self.kdata.data['high'])
         low = np.array(self.kdata.data['low'])
         volume = np.array(self.kdata.data['volume'])
-        if self.code.market in [MarketType.Ashare.SH.ETF, MarketType.Ashare.SZ.ETF]:
-            self.min_step = 0.001
-        else:
-            self.min_step = 0.01
+        self.min_step = configure_step(self.code.market,self.last_price)
+        print(self.min_step)
         t_read_data = time.perf_counter() - t
 
         t = time.perf_counter()
         self.time_grav = relativity_cy.TimeGravitation(high, low,
-                                                       min_step=self.min_step,
+                                                       step=self.min_step,
                                                        max_level=int(RELATIVITY_MAX_LEVEL))
-        # print('calc particle', time.perf_counter() - t)
+
         #
         # t = time.perf_counter()
 
         time_grav_dict = self.time_grav.calc_time_grav_dict(volume)
+        print('calc particle', time.perf_counter() - t)
+        # for key,data in time_grav_dict.items():
+        #     mean_val = data['dindex'].mean()
+        #     string = f'{key}:{mean_val}'
+        #     print(string)
         line_dist0 = time_grav_dict[0]
+
         # plt.hist(line_dist1['dindex'], 50)
         # plt.show()
         # plt.hist(np.log(line_dist1['dindex']+1),50)
@@ -127,14 +145,14 @@ class Relativity(StrategyBase):
         # line_dist2 = relativity_cy.calc_line_list(self.time_grav.get_points(1), volume)
         # line_dist1 = relativity_cy.calc_line_list(self.time_grav.get_points(0), volume)
         # print('calc line dist', time.perf_counter() - t)
-        # t = time.perf_counter()
-        self.space_grav = relativity_cy.SpaceGravitation(high, low, volume, all_capital, min_price_step=self.min_step)
+        t = time.perf_counter()
+        self.space_grav = relativity_cy.SpaceGravitation(high, low, volume, all_capital, step=self.min_step)
         qhs_index = relativity_cy.calc_qhs_index(volume, all_capital)
         cm_dist0 = self.space_grav.get_grav_dist(self.last_index)
         cm_dist1 = self.space_grav.get_grav_dist(self.last_index, start_index=qhs_index[0])
         # cm_dist0, cm_dist1 = relativity_cy.calc_CM_combine(high, low, volume, all_capital, min_price_step=min_step)
         # print('calc cm dist', time.perf_counter() - t)
-        # t = time.perf_counter()
+        print(time.perf_counter()-t)
         self.indicators = []
         mid_index = (-line_dist0['dindex'] + 2 * line_dist0['index']) / 2
         mid_price = line_dist0['price'] * (1 + 1 / (line_dist0['dprice'] + 1)) * 0.5
@@ -210,7 +228,16 @@ class Relativity(StrategyBase):
             flag = 1
         else:
             flag = 0
+        time_vol = np.zeros(len(volume))
+        for line in time_grav_dict[0]:
+            index = line['index']
+            dindex = line['dindex']
+            if line['buyvol'] > 0:
+                time_vol[index - dindex + 1: index + 1] = line['buyvol'] / dindex
+            else:
+                time_vol[index - dindex + 1: index + 1] = - line['sellvol'] / dindex
         for level, line_dist in time_grav_dict.items():
+            # print(np.mean(line_dist['dindex']))
             # index = line_dist['index']
             # width = line_dist['dindex']
             # index = time_grav_dict[0]['index']
@@ -226,33 +253,47 @@ class Relativity(StrategyBase):
             # mean_allvol = (line_dist['buyvol'] + line_dist['sellvol']) / (
             #         line_dist['sellindex'] + line_dist['buyindex'])
             # mean_allvol = np.array(pd.Series(time_grav_dict[0]['buyvol']+time_grav_dict[0]['sellvol'] / 2).ewm(span=3 ** level+1, min_periods=1).mean())
-            # mean_allvol = np.array(pd.Series((time_grav_dict[0]['buyvol']+time_grav_dict[0]['sellvol']) / 2).rolling(window=3 ** level * 2, min_periods=1).mean())
-            # line_dist['buyindex'][np.where(line_dist['buyindex'] == 0)] = 1
-            # line_dist['sellindex'][np.where(line_dist['sellindex'] == 0)] = 1
-            # mean_buyvol = line_dist['buyvol'] / line_dist['buyindex']
-            # mean_sellvol = line_dist['sellvol'] / line_dist['sellindex']
-            tmp_mean_buyvol = np.array(buy_volume_series.ewm(span=3 ** level + 1, min_periods=1).mean())
-            tmp_mean_sellvol = np.array(sell_volume_series.ewm(span=3 ** level + 1, min_periods=1).mean())
-            mean_buyvol = np.zeros(len(buy_index) + len(sell_index))
-            mean_sellvol = np.zeros(len(buy_index) + len(sell_index))
-            if flag:
-                mean_buyvol[::2] = tmp_mean_buyvol
-                mean_buyvol[1::2] = mean_buyvol[:-1:2]
-                mean_sellvol[1::2] = tmp_mean_sellvol
-                mean_sellvol[2::2] = mean_sellvol[1:-1:2]
-                mean_sellvol[0] = mean_sellvol[1]
+            index = np.arange(len(time_vol))
+            width = np.ones(len(time_vol))
+            # mean_allvol = np.array(pd.Series(time_vol).rolling(window=int(240 * 3 ** level), min_periods=240).sum())
+            mean_allvol = np.cumsum(time_vol)
+            # np.nan_to_num(mean_allvol, copy=False)
+            mean_buyvol = np.array(mean_allvol)
+            mean_sellvol = np.array(pd.Series(mean_allvol).ewm(span=240, min_periods=1).mean())
+            if level == 1:
+                mean_buyvol = np.where(time_vol > 0, time_vol, 0)
+                mean_sellvol = np.where(time_vol < 0, -time_vol, 0)
+                mean_buyvol = np.array(pd.Series(mean_buyvol).rolling(window=int(240), min_periods=240).sum())
+                mean_sellvol = np.array(
+                    pd.Series(mean_sellvol).rolling(window=int(240), min_periods=240).sum())
+                np.nan_to_num(mean_buyvol, copy=False)
+                np.nan_to_num(mean_sellvol, copy=False)
+            if level == 2:
+                line_dist['buyindex'][np.where(line_dist['buyindex'] == 0)] = 1
+                line_dist['sellindex'][np.where(line_dist['sellindex'] == 0)] = 1
+                tmp_mean_buyvol = np.array(buy_volume_series.ewm(span=240, min_periods=240).mean())
+                tmp_mean_sellvol = np.array(sell_volume_series.ewm(span=240, min_periods=240).mean())
+                np.nan_to_num(tmp_mean_buyvol, copy=False)
+                np.nan_to_num(tmp_mean_sellvol, copy=False)
+                mean_buyvol = np.zeros(len(buy_index) + len(sell_index))
+                mean_sellvol = np.zeros(len(buy_index) + len(sell_index))
+                if flag:
+                    mean_buyvol[::2] = tmp_mean_buyvol
+                    mean_buyvol[1::2] = mean_buyvol[:-1:2]
+                    mean_sellvol[1::2] = tmp_mean_sellvol
+                    mean_sellvol[2::2] = mean_sellvol[1:-1:2]
+                    mean_sellvol[0] = mean_sellvol[1]
+                else:
+                    mean_sellvol[::2] = tmp_mean_sellvol
+                    mean_sellvol[1::2] = mean_sellvol[:-1:2]
+                    mean_buyvol[1::2] = tmp_mean_buyvol
+                    mean_buyvol[2::2] = mean_buyvol[1:-1:2]
+                    mean_buyvol[0] = mean_buyvol[1]
 
-            else:
-                mean_sellvol[::2] = tmp_mean_sellvol
-                mean_sellvol[1::2] = mean_sellvol[:-1:2]
-                mean_buyvol[1::2] = tmp_mean_buyvol
-                mean_buyvol[2::2] = mean_buyvol[1:-1:2]
-                mean_buyvol[0] = mean_buyvol[1]
-
-            # mean_buyvol = np.array(pd.Series(time_grav_dict[0]['buyvol']).rolling(window=3 ** level * 2, min_periods=1).mean())
-            # mean_sellvol = np.array(pd.Series(time_grav_dict[0]['sellvol']).rolling(window=3 ** level * 2, min_periods=1).mean())
-            # buyvol = all_vol * buy_mask / dl
-            # sellvol = all_vol * sell_mask / dl
+                # mean_buyvol = np.array(pd.Series(time_grav_dict[0]['buyvol']).rolling(window=3 ** level * 2, min_periods=1).mean())
+                # mean_sellvol = np.array(pd.Series(time_grav_dict[0]['sellvol']).rolling(window=3 ** level * 2, min_periods=1).mean())
+                # buyvol = all_vol * buy_mask / dl
+                # sellvol = all_vol * sell_mask / dl
             self.indicators.append(
                 {'name': '平均成交量 级别{}'.format(level),
                  'val': {'index': index, 'width': width, 'buyvol': mean_buyvol, 'sellvol': mean_sellvol}})
@@ -607,14 +648,14 @@ if __name__ == '__main__':
     import gc, time
     from matplotlib.ticker import MultipleLocator, FixedLocator
 
-    end_time = TimeTool.str_to_dt('2022-04-24 15:00:00')
+    end_time = TimeTool.str_to_dt('2022-05-09 15:00:00')
     start_time = end_time - datetime.timedelta(days=365 + 365)
     start_time = start_time.replace(hour=9, minute=0, second=0)
-    test_code_list = ['002273', '002382', '601456', '002492', '001979', '002584', '999999', '399006', '399001']
-    test_code_list1 = ['000552']
-    for test_code in test_code_list1:
-        t_code = Code(test_code, '5', start_time, end_time=end_time,
-                      data_source={'local': DataSource.Local.Default, 'live': DataSource.Live.VQtdx})
+    test_code_list = ['999999', '399001', '399006', 'sh.000016', 'sh.000300']
+    test_code_list1 = ['999999']
+    for test_code in test_code_list:
+        t_code = Code(test_code, frequency='1', start_time=start_time, end_time=end_time)
+        print(t_code.market)
         test_strategy = Relativity(code=t_code, show_result=False)
         test_strategy.analyze()
         # test_score = test_strategy.analyze_score()

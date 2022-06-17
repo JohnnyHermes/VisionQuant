@@ -6,7 +6,7 @@ from bokeh.io import curdoc, export
 from VisionQuant.DataCenter.DataFetch import DataSource
 from VisionQuant.utils.Params import MarketType
 
-analyze_data_source = DataSource.Local.VQapi
+analyze_data_source = DataSource.Local.Default
 
 from bokeh.models import ColorBar, LinearColorMapper
 from bokeh.plotting import figure, show

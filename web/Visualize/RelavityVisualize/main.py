@@ -167,9 +167,9 @@ def create_main_ax():
                      lod_factor=50,
                      lod_interval=250
                      )
-    main_ax.x_range = DataRange1d(bounds=(0, ana_result.last_index + 1920), start=0, end=ana_result.last_index + 960)
+    main_ax.x_range = DataRange1d(bounds=(0, ana_result.last_index + 9600), start=0, end=ana_result.last_index + 4800)
     main_ax.grid.grid_line_alpha = 0.4
-    main_ax.xaxis.ticker.base = 24
+    main_ax.xaxis.ticker.base = 120
     main_ax.xaxis.ticker.desired_num_ticks = 8
     main_ax.xaxis.ticker.num_minor_ticks = 4
     # main_ax.xaxis.ticker.min_interval = 1
@@ -223,11 +223,11 @@ def draw_main_ax(x_range=None):
     global main_ax, main_ax_line_source_dict, main_ax_line_dict, base_points, main_ax_trend_source, \
         main_ax_peak_pricelabel_list, main_ax_peak_span_list, main_ax_last_price_line, main_ax_last_price_label
     main_ax.title = Title(text="{} {}".format(code.code, TimeTool.time_to_str(ana_result.last_time)))
-    main_ax.x_range.bounds = (0, ana_result.last_index + 1920)
+    main_ax.x_range.bounds = (0, ana_result.last_index + 9600)
     main_ax_peak_pricelabel_list = []
     main_ax_peak_span_list = []
     if x_range is None:
-        main_ax.x_range.end = ana_result.last_index + 960
+        main_ax.x_range.end = ana_result.last_index + 4800
         main_ax.x_range.start = 0
     else:
         main_ax.x_range.end = x_range[1]
@@ -273,8 +273,8 @@ def draw_main_ax(x_range=None):
 
     time_list = [TimeTool.time_to_str(t, '%y-%m-%d %H:%M') for t in ana_result.kdata.data['time']]
     len_time_list = len(time_list)
-    for i in range(len_time_list, ana_result.last_index + 1920):
-        minutes = 5 * (i - len_time_list + 1)
+    for i in range(len_time_list, ana_result.last_index + 9600):
+        minutes = 1 * (i - len_time_list + 1)
         time_list.append("+{}min".format(minutes))
     xaxis_label_dict = dict(zip(range(len(time_list)), time_list))
     main_ax.xaxis.major_label_overrides = xaxis_label_dict
@@ -484,8 +484,8 @@ def update_main_ax():
 
     time_list = [TimeTool.time_to_str(t, '%y-%m-%d %H:%M') for t in ana_result.kdata.data['time']]
     len_time_list = len(time_list)
-    for i in range(len_time_list, ana_result.last_index + 1920):
-        minutes = 5 * (i - len_time_list + 1)
+    for i in range(len_time_list, ana_result.last_index + 9600):
+        minutes = 1 * (i - len_time_list + 1)
         time_list.append("+{}min".format(minutes))
     xaxis_label_dict = dict(zip(range(len(time_list)), time_list))
     main_ax.xaxis.major_label_overrides = xaxis_label_dict
@@ -542,16 +542,16 @@ def create_time_grav_ax():
                           y_axis_location='right',
                           active_drag=None,
                           lod_threshold=1000,
-                          lod_factor=50,
-                          lod_interval=250
+                          lod_factor=100,
+                          lod_interval=50
                           )
     time_grav_ax.y_range.only_visible = True
     time_grav_ax.xaxis.visible = False
     time_grav_ax.grid.grid_line_alpha = 0.4
-    time_grav_ax.xaxis.ticker.base = 24
+    time_grav_ax.xaxis.ticker.base = 120
     time_grav_ax.xaxis.ticker.desired_num_ticks = 8
     time_grav_ax.xaxis.ticker.num_minor_ticks = 4
-    time_grav_ax.xaxis.ticker.min_interval = 1
+    # time_grav_ax.xaxis.ticker.min_interval = 1
     time_grav_ax.yaxis.major_label_standoff = 0
     time_grav_ax.min_border_right = 50
     time_grav_dist_source = ColumnDataSource()
@@ -594,9 +594,12 @@ def configure_time_grav_ax_yrange(data_dict, start=None, end=None, is_mvol=False
 def draw_time_grav_dist_mvol(indicator):
     global time_grav_ax, time_grav_dist_source
     time_grav_ax.yaxis.formatter = NumeralTickFormatter(format='0.00a')
-    index = (2 * indicator['val']['index'] - indicator['val']['width']) / 2
-    buyvol = np.sqrt(indicator['val']['buyvol'])
-    sellvol = np.sqrt(indicator['val']['sellvol'])
+    # index = (2 * indicator['val']['index'] - indicator['val']['width']) / 2
+    index = indicator['val']['index']
+    buyvol = indicator['val']['buyvol']
+    sellvol = indicator['val']['sellvol']
+    # buyvol = np.sqrt(indicator['val']['buyvol'])
+    # sellvol = np.sqrt(indicator['val']['sellvol'])
     # allvol = np.sqrt(indicator['val']['allvol'])
     # new_data = {'index': index, 'buyvol': buyvol, 'sellvol': sellvol, 'allvol': allvol}
     new_data = {'index': index, 'buyvol': buyvol, 'sellvol': sellvol}
@@ -607,14 +610,18 @@ def draw_time_grav_dist_mvol(indicator):
                         color='red')
     time_grav_ax.circle(x='index', y='sellvol', source=time_grav_dist_source,
                         color='green')
-    configure_time_grav_ax_yrange(new_data, is_mvol=True)
+    # configure_time_grav_ax_yrange(new_data, is_mvol=True)
+    configure_time_grav_ax_yrange(new_data)
 
 
 def update_time_grav_dist_mvol(indicator):
     global time_grav_dist_source
-    index = (2 * indicator['val']['index'] - indicator['val']['width']) / 2
-    buyvol = np.sqrt(indicator['val']['buyvol'])
-    sellvol = np.sqrt(indicator['val']['sellvol'])
+    # index = (2 * indicator['val']['index'] - indicator['val']['width']) / 2
+    # buyvol = np.sqrt(indicator['val']['buyvol'])
+    # sellvol = np.sqrt(indicator['val']['sellvol'])
+    index = indicator['val']['index']
+    buyvol = indicator['val']['buyvol']
+    sellvol = indicator['val']['sellvol']
     # allvol = np.sqrt(indicator['val']['allvol'])
     # new_data = {'index': index, 'buyvol': buyvol, 'sellvol': sellvol, 'allvol': allvol}
     new_data = {'index': index, 'buyvol': buyvol, 'sellvol': sellvol}
@@ -658,7 +665,8 @@ def x_range_start_changed_callback(attr, old, new):
         if indicator_select.value == "均线离散度":
             configure_time_grav_ax_yrange(time_grav_dist_source.data, start=0)
         elif "平均成交量" in indicator_select.value:
-            configure_time_grav_ax_yrange(time_grav_dist_source.data, is_mvol=True)
+            # configure_time_grav_ax_yrange(time_grav_dist_source.data, is_mvol=True)
+            configure_time_grav_ax_yrange(time_grav_dist_source.data)
         elif indicator_select.value in ('MTM', 'Trend'):
             configure_time_grav_ax_yrange(time_grav_dist_source.data)
 
