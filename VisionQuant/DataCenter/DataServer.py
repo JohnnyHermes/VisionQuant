@@ -17,7 +17,7 @@ class KDataServer:
         self.source_mng = DataFetch.SocketClientsManager()
         self._last_update_time = TimeTool.get_now_time(return_type='datetime')
 
-    def get_data(self, code):
+    def get_data(self, code: Code):
         print("send kdata: {} start_time:{} end_time:{}".format(code.code, code.start_time, code.end_time))
         code_key = self.get_code_key(code)
         if code_key not in self.data_dict.keys():

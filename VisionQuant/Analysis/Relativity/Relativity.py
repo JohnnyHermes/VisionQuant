@@ -96,7 +96,7 @@ class Relativity(StrategyBase):
             all_capital = self.kdata.data['volume'].sum() / 9
         else:
             all_capital = basic_finance_data['流通股本']
-        if len(self.kdata) <= 8640:
+        if len(self.kdata) <= 7200:
             print("数据太短啦")
             return None
         self.last_time = self.kdata.get_last_time()
@@ -105,8 +105,8 @@ class Relativity(StrategyBase):
         high = np.array(self.kdata.data['high'])
         low = np.array(self.kdata.data['low'])
         volume = np.array(self.kdata.data['volume'])
-        self.min_step = configure_step(self.code.market,self.last_price)
-        print(self.min_step)
+        self.min_step = configure_step(self.code.market, self.last_price)
+        # print(self.min_step)
         t_read_data = time.perf_counter() - t
 
         t = time.perf_counter()
@@ -152,7 +152,7 @@ class Relativity(StrategyBase):
         cm_dist1 = self.space_grav.get_grav_dist(self.last_index, start_index=qhs_index[0])
         # cm_dist0, cm_dist1 = relativity_cy.calc_CM_combine(high, low, volume, all_capital, min_price_step=min_step)
         # print('calc cm dist', time.perf_counter() - t)
-        print(time.perf_counter()-t)
+        print(time.perf_counter() - t)
         self.indicators = []
         mid_index = (-line_dist0['dindex'] + 2 * line_dist0['index']) / 2
         mid_price = line_dist0['price'] * (1 + 1 / (line_dist0['dprice'] + 1)) * 0.5

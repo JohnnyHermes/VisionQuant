@@ -106,8 +106,14 @@ def store_blocks_data(data: dict, market=MarketType.Ashare):
 def store_update_failed_codelist(codelist: list, date: str, market=MarketType.Ashare):
     market_str = anadata_store_market_transform(market)
     fpath = Path('/'.join([LOCAL_DIR, market_str + '_update_failed_codelist.txt']))
+    print(fpath)
     with open(fpath, 'a+') as f:
         f.write('\n')
         codelist_str = ' '.join(codelist)
         all_str = date + ' | ' + codelist_str
+        print(all_str)
         f.write(all_str)
+
+if __name__ == '__main__':
+    codelist = ['123456','456789']
+    store_update_failed_codelist(codelist,date='2022-06-23')

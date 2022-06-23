@@ -53,7 +53,7 @@ class AshareCodePool(CodePool):
             logger.critical("错误的code参数类型!")
             raise ValueError("错误的code参数类型!")
 
-    def get_all_code(self, start_time=None, end_time=None, frequency=None, return_type=dict):
+    def get_all_code(self, start_time=None, end_time=None, frequency=None, return_type=dict, selected_market=None):
         if self.code_df is None:
             self.get_code_df()
         if return_type == dict:
@@ -72,10 +72,17 @@ class AshareCodePool(CodePool):
             return codedict
         else:
             codelist = []
-            for _code, _name, _market in zip(self.code_df['code'], self.code_df['name'], self.code_df['market']):
-                codelist.append(Code(code=_code, name=_name, market=_market, start_time=start_time,
-                                     end_time=end_time, frequency=frequency))
-            return codelist
+            if selected_market is None:
+                for _code, _name, _market in zip(self.code_df['code'], self.code_df['name'], self.code_df['market']):
+                    codelist.append(Code(code=_code, name=_name, market=_market, start_time=start_time,
+                                         end_time=end_time, frequency=frequency))
+                return codelist
+            else:
+                for _code, _name, _market in zip(self.code_df['code'], self.code_df['name'], self.code_df['market']):
+                    if _market in selected_market:
+                        codelist.append(Code(code=_code, name=_name, market=_market, start_time=start_time,
+                                             end_time=end_time, frequency=frequency))
+                return codelist
 
     def get_blocks_data(self, key=None):
         if self.blocks_data is None:

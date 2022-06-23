@@ -25,6 +25,7 @@ curdoc().theme = 'dark_minimal'
 MAIN_WEIGHT = 1700
 MAIN_HEIGHT = 750
 line_colorlist = [Set2_8[i] for i in (7, 2, 1, 0, 3, 4, 5)]
+print(line_colorlist)
 default_indicator_name = '均线离散度'
 time_count = 0
 auto_fresh_period = 6  # 单位：秒

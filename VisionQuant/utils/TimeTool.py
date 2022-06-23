@@ -3,7 +3,7 @@ import numpy as np
 import re
 from path import Path
 
-from VisionQuant.utils.Params import MarketType, LOCAL_DIR
+from VisionQuant.utils.Params import MarketType, LOCAL_DIR, Freq
 
 # 交易日历读取
 tradedate_fpath = Path('/'.join([LOCAL_DIR, 'AshareTradeDate.txt']))
@@ -103,24 +103,56 @@ def get_now_time(return_type: str = 'npdt64'):
         raise ValueError
 
 
+def generate_future_time_list(market, freq, last_time):
+    if MarketType.is_ashare(market):
+        nearest_trade_date = get_nearest_trade_date(last_time, MarketType.Ashare, 'end')
+        future_trade_dates = tuple(filter(lambda x: x >= nearest_trade_date, ASHARE_TRADE_DATE))
+        minute_str_list = []
+        if freq == Freq.MIN1:
+            hours = (9, 10, 11, 13, 14, 15)
+            for hour in hours:
+                if hour == 9:
+                    minute_str_list += ['{:0>2}:{:0>2}'.format(hour, minute) for minute in range(31, 60)]
+                elif hour == 11:
+                    minute_str_list += ['{:0>2}:{:0>2}'.format(hour, minute) for minute in range(0, 31)]
+                elif hour == 13:
+                    minute_str_list += ['{:0>2}:{:0>2}'.format(hour, minute) for minute in range(1, 60)]
+                elif hour == 15:
+                    minute_str_list.append('15:00')
+                else:
+                    minute_str_list += ['{:0>2}:{:0>2}'.format(hour, minute) for minute in range(0, 60)]
+        future_time_list = []
+        for trade_date in future_trade_dates:
+            future_time_list += ['{}\n{}'.format(trade_date, minute_str) for minute_str in minute_str_list]
+        return future_time_list
+    else:  # todo: 支持更多市场类型
+        raise ValueError("错误的市场类型")
+
+
 def get_nearest_trade_date(t, market, flag='end'):
+    """
+    如果是end，那么盘中得到的日期将是当日，如果是start，那么是下一个交易日
+    """
+
     def _get_nearest_trade_date(_t, _trade_date_list, _flag='end'):
         if flag == 'end':
             i = len(_trade_date_list) - 1
             while i >= 0:
-                if date_str >= _trade_date_list[i]:
+                if _t >= _trade_date_list[i]:
                     return _trade_date_list[i]
                 else:
                     i -= 1
             return _trade_date_list[0]
         elif flag == 'start':
             i = 0
-            while i <= len(_trade_date_list) - 1:
-                if date_str <= _trade_date_list[i]:
+            len_list = len(_trade_date_list)
+            while i <= len_list - 1:
+                if _t <= _trade_date_list[i]:
                     return _trade_date_list[i]
                 else:
                     i += 1
             return _trade_date_list[len(_trade_date_list) - 1]
+
     if MarketType.is_ashare(market):
         if ASHARE_TRADE_DATE is None:
             return None

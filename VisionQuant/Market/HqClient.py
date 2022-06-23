@@ -27,7 +27,7 @@ class HqClient:
     def close(self):
         self.socket.close()
 
-    def get_kdata(self, codes):
+    def get_kdata(self, code):
         try:
             self.connect()
         except Exception as e:
@@ -35,7 +35,7 @@ class HqClient:
             print("行情服务器可能未启动，请检查！")
             return None
         else:
-            request_body = pickle.dumps(codes)
+            request_body = pickle.dumps(code)
             request_flag = REQUEST_HEAD_KDATA
             request_header = struct.pack('>HII', request_flag, 1024, len(request_body))
             self.socket.sendall(request_header)
@@ -143,9 +143,9 @@ if __name__ == '__main__':
 
     end_time = '2022-01-28 15:00:00'
     start_time = TimeTool.get_start_time(end_time, days=365 + 180)
-    code = Code('002382', start_time=start_time, end_time=end_time)
+    test_code = Code('002382', start_time=start_time, end_time=end_time)
     client = HqClient()
-    data_struct = client.get_kdata(code)
+    data_struct = client.get_kdata(test_code)
     print(data_struct.get_kdata('5').data)
-    print(client.get_basic_finance_data(code))
+    print(client.get_basic_finance_data(test_code))
     # client.configure_dataserver(force_live=False, clean_data=1)

@@ -33,6 +33,9 @@ today_date = TimeTool.time_to_str(TimeTool.get_now_time(), '%Y-%m-%d')
 
 data_server = DataServer(force_live=True)
 
+UPDATE_MATKETTYPE = (MarketType.Ashare.SH.STOCK, MarketType.Ashare.SH.KCB, MarketType.Ashare.SH.INDEX,
+                     MarketType.Ashare.SZ.STOCK, MarketType.Ashare.SZ.CYB, MarketType.Ashare.SZ.INDEX)
+
 
 class DataUpdateBase:
     def __init__(self):
@@ -103,8 +106,12 @@ class AshareDataUpdate(DataUpdateBase):
 
     def _update_kdata(self):
         def update_single_stock(_code):
-            datastruct = data_server.get_kdata(_code)
-            store_kdata_to_hdf5(datastruct)
+            try:
+                datastruct = data_server.get_kdata(_code)
+            except Exception as e:
+                raise e
+            else:
+                store_kdata_to_hdf5(datastruct)
 
         logger.info("开始更新 {} 的A股k线数据...".format(today_date))
         if self.update_codes is not None:
@@ -112,7 +119,8 @@ class AshareDataUpdate(DataUpdateBase):
             for code in self.update_codes:
                 code_list.append(self.code_pool.get_code(code, frequency=self.update_frequency))
         else:
-            code_list = self.code_pool.get_all_code(frequency=self.update_frequency, return_type=list)
+            code_list = self.code_pool.get_all_code(frequency=self.update_frequency, return_type=list,
+                                                    selected_market=UPDATE_MATKETTYPE)
         error_code_list = []
         code_list = tqdm(code_list)
         for code in code_list:

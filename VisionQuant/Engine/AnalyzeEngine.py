@@ -88,10 +88,10 @@ class AnalyzeEngine:
 #         self._queue_dict[code.code] = (queue_name, strategy, 0)
 #         self.channel.queue_bind(exchange='analyze_data', queue=queue_name, routing_key=queue_name)
 #
-#     def start_strategy(self, codes):
-#         if not isinstance(codes, list):
-#             codes = list(codes)
-#         for code in codes:
+#     def start_strategy(self, code):
+#         if not isinstance(code, list):
+#             code = list(code)
+#         for code in code:
 #             try:
 #                 queue_name, strategy, _ = self._query_queue(code)
 #                 self.channel.basic_consume(queue=queue_name, on_message_callback=strategy.callback, auto_ack=True)
@@ -100,7 +100,7 @@ class AnalyzeEngine:
 #                 print(e)
 #                 continue
 #
-#     def stop_strategy(self, codes):
+#     def stop_strategy(self, code):
 #         pass
 #
 #     def query_strategy_status(self, code):
@@ -120,7 +120,7 @@ class AnalyzeEngine:
 #     def update(self):
 #         for content in self._queue_dict.values():
 #             if content[2]:
-#                 response = self.hq_client.get_data(codes=content[1].code, request_id=content[0])
+#                 response = self.hq_client.get_data(code=content[1].code, request_id=content[0])
 #                 print(1)
 #                 self._publish_data(response)
 #                 print(response)
