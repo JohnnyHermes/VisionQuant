@@ -67,6 +67,7 @@ class DataSourceTdxLive(DataSourceBase):
                                                         market=code.market,
                                                         freq=code.frequency,  # 这里不同访问freq的value属性，api自动转换
                                                         count=800)
+            print("获取数据成功")
         except (ResponseRecvFailed, SendRequestPkgFailed, timeout, ResponseHeaderRecvFailed):
             logger.warning("连接至通达信服务器失败，重新尝试链接...")
             flg = socket_client.reconnect()

@@ -77,7 +77,7 @@ class Relativity(StrategyBase):
         self.time_grav = None
         self.trend_dict = None
         self.zcyl = None
-        self.indicators = []
+        self.indicators = None
         self.last_time = None
         self.last_price = None
         self.last_index = None
@@ -118,12 +118,12 @@ class Relativity(StrategyBase):
         # t = time.perf_counter()
 
         time_grav_dict = self.time_grav.calc_time_grav_dict(volume)
-        print('calc particle', time.perf_counter() - t)
+        # print('calc particle', time.perf_counter() - t)
         # for key,data in time_grav_dict.items():
         #     mean_val = data['dindex'].mean()
         #     string = f'{key}:{mean_val}'
         #     print(string)
-        line_dist0 = time_grav_dict[0]
+        # line_dist0 = time_grav_dict[0]
 
         # plt.hist(line_dist1['dindex'], 50)
         # plt.show()
@@ -147,41 +147,41 @@ class Relativity(StrategyBase):
         # print('calc line dist', time.perf_counter() - t)
         t = time.perf_counter()
         self.space_grav = relativity_cy.SpaceGravitation(high, low, volume, all_capital, step=self.min_step)
-        qhs_index = relativity_cy.calc_qhs_index(volume, all_capital)
-        cm_dist0 = self.space_grav.get_grav_dist(self.last_index)
-        cm_dist1 = self.space_grav.get_grav_dist(self.last_index, start_index=qhs_index[0])
+        # qhs_index = relativity_cy.calc_qhs_index(volume, all_capital)
+        # cm_dist0 = self.space_grav.get_grav_dist(self.last_index)
+        # cm_dist1 = self.space_grav.get_grav_dist(self.last_index, start_index=qhs_index[0])
         # cm_dist0, cm_dist1 = relativity_cy.calc_CM_combine(high, low, volume, all_capital, min_price_step=min_step)
         # print('calc cm dist', time.perf_counter() - t)
-        print(time.perf_counter() - t)
-        self.indicators = []
-        mid_index = (-line_dist0['dindex'] + 2 * line_dist0['index']) / 2
-        mid_price = line_dist0['price'] * (1 + 1 / (line_dist0['dprice'] + 1)) * 0.5
-        ma_list = []
-        self.trend_dict = dict()
-        self.trend_dict['index'] = mid_index
+        # print(time.perf_counter() - t)
+        self.indicators = dict()
+        # mid_index = (-line_dist0['dindex'] + 2 * line_dist0['index']) / 2
+        # mid_price = line_dist0['price'] * (1 + 1 / (line_dist0['dprice'] + 1)) * 0.5
+        # ma_list = []
+        # self.trend_dict = dict()
+        # self.trend_dict['index'] = mid_index
         # ma_list_show = []
-        for period in [3, 9, 27, 81, 243, 729]:
-            tmp_ma = Indicators.EMA(mid_price, period)
-            replace_val = tmp_ma[period - 1]
-            np.nan_to_num(tmp_ma, copy=False, nan=replace_val)
-            # ma_list_show.append({'name': 'junxian', 'index': mid_index, 'val': tmp_ma})
-            ma_list.append(tmp_ma)
-        ma = np.array(ma_list)
-        all_lisandu = np.std(ma, axis=0) / np.mean(ma, axis=0)
-        short_lisandu = np.std(ma[0:3], axis=0) / np.mean(ma[0:3], axis=0)
-        long_lisandu = np.std(ma[2:5], axis=0) / np.mean(ma[2:5], axis=0)
-        self.trend_dict['short'] = ma[0] * 0.309 + ma[1] * 0.309 + ma[2] * 0.191 + ma[3] * 0.191
-        self.trend_dict['mid'] = ma[1] * 0.191 + ma[2] * 0.309 + ma[3] * 0.309 + ma[4] * 0.191
-        self.trend_dict['long'] = ma[2] * 0.191 + ma[3] * 0.191 + ma[4] * 0.309 + ma[5] * 0.309
-
-        def ma_filter(_data, _period):
-            _data = Indicators.MA(_data, _period)
-            _replace_val = _data[_period - 1]
-            return np.nan_to_num(_data, nan=_replace_val)
-
-        all_lisandu = ma_filter(all_lisandu, 9)
-        short_lisandu = ma_filter(short_lisandu, 9)
-        long_lisandu = ma_filter(long_lisandu, 9)
+        # for period in [3, 9, 27, 81, 243, 729]:
+        #     tmp_ma = Indicators.EMA(mid_price, period)
+        #     replace_val = tmp_ma[period - 1]
+        #     np.nan_to_num(tmp_ma, copy=False, nan=replace_val)
+        #     # ma_list_show.append({'name': 'junxian', 'index': mid_index, 'val': tmp_ma})
+        #     ma_list.append(tmp_ma)
+        # ma = np.array(ma_list)
+        # all_lisandu = np.std(ma, axis=0) / np.mean(ma, axis=0)
+        # short_lisandu = np.std(ma[0:3], axis=0) / np.mean(ma[0:3], axis=0)
+        # long_lisandu = np.std(ma[2:5], axis=0) / np.mean(ma[2:5], axis=0)
+        # self.trend_dict['short'] = ma[0] * 0.309 + ma[1] * 0.309 + ma[2] * 0.191 + ma[3] * 0.191
+        # self.trend_dict['mid'] = ma[1] * 0.191 + ma[2] * 0.309 + ma[3] * 0.309 + ma[4] * 0.191
+        # self.trend_dict['long'] = ma[2] * 0.191 + ma[3] * 0.191 + ma[4] * 0.309 + ma[5] * 0.309
+        #
+        # def ma_filter(_data, _period):
+        #     _data = Indicators.MA(_data, _period)
+        #     _replace_val = _data[_period - 1]
+        #     return np.nan_to_num(_data, nan=_replace_val)
+        #
+        # all_lisandu = ma_filter(all_lisandu, 9)
+        # short_lisandu = ma_filter(short_lisandu, 9)
+        # long_lisandu = ma_filter(long_lisandu, 9)
         # i = 12  # 平均一天12笔
         # buy_dindex_sum = 0
         # sell_dindex_sum = 0
@@ -218,184 +218,285 @@ class Relativity(StrategyBase):
         # final_index_new = Indicators.EMA(np.array(final_index_new), 6)
         # self.indicators.append(
         #     {'name': 'mfi', 'index': vol_index, 'val': [buy_index, sell_index, final_index, final_index_new,test_index]})
-        index = time_grav_dict[0]['index']
-        width = time_grav_dict[0]['dindex']
-        buy_index = np.where(time_grav_dict[0]['buyvol'] > 0)[0]
-        sell_index = np.where(time_grav_dict[0]['sellvol'] > 0)[0]
-        buy_volume_series = pd.Series(time_grav_dict[0]['buyvol'][buy_index])
-        sell_volume_series = pd.Series(time_grav_dict[0]['sellvol'][sell_index])
-        if buy_index[0] == 0:
-            flag = 1
-        else:
-            flag = 0
+        # index = time_grav_dict[0]['index']
+        # width = time_grav_dict[0]['dindex']
+        # buy_index = np.where(time_grav_dict[0]['buyvol'] > 0)[0]
+        # sell_index = np.where(time_grav_dict[0]['sellvol'] > 0)[0]
+        # buy_volume_series = pd.Series(time_grav_dict[0]['buyvol'][buy_index])
+        # sell_volume_series = pd.Series(time_grav_dict[0]['sellvol'][sell_index])
         time_vol = np.zeros(len(volume))
+        time_dp = np.zeros(len(volume))
         for line in time_grav_dict[0]:
             index = line['index']
             dindex = line['dindex']
+            dprice = line['dprice']
+            time_dp[index - dindex + 1: index + 1] = dprice / dindex
             if line['buyvol'] > 0:
                 time_vol[index - dindex + 1: index + 1] = line['buyvol'] / dindex
             else:
                 time_vol[index - dindex + 1: index + 1] = - line['sellvol'] / dindex
-        for level, line_dist in time_grav_dict.items():
-            # print(np.mean(line_dist['dindex']))
-            # index = line_dist['index']
-            # width = line_dist['dindex']
-            # index = time_grav_dict[0]['index']
-            # width = time_grav_dict[0]['dindex']
-            # dp = line_dist['dprice']
-            # buy_mask = np.where(dp > 0, 1, 0)
-            # sell_mask = np.where(dp < 0, 1, 0)
-            # dp = (dp - np.min(dp)) / (np.max(dp) - np.min(dp))
-            # v = line_dist['volume']
-            # val = v * (np.log2(1 + dp) + 0.0001) / dl
-            # minus_list = np.where(line_dist['dprice'] < 0)
-            # val[minus_list] *= -1
-            # mean_allvol = (line_dist['buyvol'] + line_dist['sellvol']) / (
-            #         line_dist['sellindex'] + line_dist['buyindex'])
-            # mean_allvol = np.array(pd.Series(time_grav_dict[0]['buyvol']+time_grav_dict[0]['sellvol'] / 2).ewm(span=3 ** level+1, min_periods=1).mean())
-            index = np.arange(len(time_vol))
-            width = np.ones(len(time_vol))
-            # mean_allvol = np.array(pd.Series(time_vol).rolling(window=int(240 * 3 ** level), min_periods=240).sum())
-            mean_allvol = np.cumsum(time_vol)
-            # np.nan_to_num(mean_allvol, copy=False)
-            mean_buyvol = np.array(mean_allvol)
-            mean_sellvol = np.array(pd.Series(mean_allvol).ewm(span=240, min_periods=1).mean())
-            if level == 1:
-                mean_buyvol = np.where(time_vol > 0, time_vol, 0)
-                mean_sellvol = np.where(time_vol < 0, -time_vol, 0)
-                mean_buyvol = np.array(pd.Series(mean_buyvol).rolling(window=int(240), min_periods=240).sum())
-                mean_sellvol = np.array(
-                    pd.Series(mean_sellvol).rolling(window=int(240), min_periods=240).sum())
-                np.nan_to_num(mean_buyvol, copy=False)
-                np.nan_to_num(mean_sellvol, copy=False)
-            if level == 2:
-                line_dist['buyindex'][np.where(line_dist['buyindex'] == 0)] = 1
-                line_dist['sellindex'][np.where(line_dist['sellindex'] == 0)] = 1
-                tmp_mean_buyvol = np.array(buy_volume_series.ewm(span=240, min_periods=240).mean())
-                tmp_mean_sellvol = np.array(sell_volume_series.ewm(span=240, min_periods=240).mean())
-                np.nan_to_num(tmp_mean_buyvol, copy=False)
-                np.nan_to_num(tmp_mean_sellvol, copy=False)
-                mean_buyvol = np.zeros(len(buy_index) + len(sell_index))
-                mean_sellvol = np.zeros(len(buy_index) + len(sell_index))
-                if flag:
-                    mean_buyvol[::2] = tmp_mean_buyvol
-                    mean_buyvol[1::2] = mean_buyvol[:-1:2]
-                    mean_sellvol[1::2] = tmp_mean_sellvol
-                    mean_sellvol[2::2] = mean_sellvol[1:-1:2]
-                    mean_sellvol[0] = mean_sellvol[1]
-                else:
-                    mean_sellvol[::2] = tmp_mean_sellvol
-                    mean_sellvol[1::2] = mean_sellvol[:-1:2]
-                    mean_buyvol[1::2] = tmp_mean_buyvol
-                    mean_buyvol[2::2] = mean_buyvol[1:-1:2]
-                    mean_buyvol[0] = mean_buyvol[1]
-
-                # mean_buyvol = np.array(pd.Series(time_grav_dict[0]['buyvol']).rolling(window=3 ** level * 2, min_periods=1).mean())
-                # mean_sellvol = np.array(pd.Series(time_grav_dict[0]['sellvol']).rolling(window=3 ** level * 2, min_periods=1).mean())
-                # buyvol = all_vol * buy_mask / dl
-                # sellvol = all_vol * sell_mask / dl
-            self.indicators.append(
-                {'name': '平均成交量 级别{}'.format(level),
-                 'val': {'index': index, 'width': width, 'buyvol': mean_buyvol, 'sellvol': mean_sellvol}})
-        self.indicators.append({'name': '均线离散度',
-                                'val': {'index': mid_index, 'short': short_lisandu, 'long': long_lisandu,
-                                        'all': all_lisandu}})
-        short_mtm, mid_mtm, long_mtm = Indicators.MTM(self.trend_dict['short'], self.trend_dict['mid'],
-                                                      self.trend_dict['long'])
-        short_trend, long_trend = Indicators.trend(self.trend_dict['short'], self.trend_dict['mid'],
-                                                   self.trend_dict['long'])
-        self.indicators.append({'name': 'MTM',
-                                'val': {'index': mid_index, 'short': short_mtm, 'mid': mid_mtm, 'long': long_mtm}})
-        self.indicators.append({'name': 'Trend',
-                                'val': {'index': mid_index, 'short': short_trend, 'long': long_trend}})
-        # print('calc indicators list', time.perf_counter() - t)
+        self.indicators['time_vol'] = time_vol
+        self.indicators['time_dp'] = time_dp
+        # if buy_index[0] == 0:
+        #     flag = 1
+        # else:
+        #     flag = 0
+        # for level, line_dist in time_grav_dict.items():
+        #     # print(np.mean(line_dist['dindex']))
+        #     # index = line_dist['index']
+        #     # width = line_dist['dindex']
+        #     # index = time_grav_dict[0]['index']
+        #     # width = time_grav_dict[0]['dindex']
+        #     # dp = line_dist['dprice']
+        #     # buy_mask = np.where(dp > 0, 1, 0)
+        #     # sell_mask = np.where(dp < 0, 1, 0)
+        #     # dp = (dp - np.min(dp)) / (np.max(dp) - np.min(dp))
+        #     # v = line_dist['volume']
+        #     # val = v * (np.log2(1 + dp) + 0.0001) / dl
+        #     # minus_list = np.where(line_dist['dprice'] < 0)
+        #     # val[minus_list] *= -1
+        #     # mean_allvol = (line_dist['buyvol'] + line_dist['sellvol']) / (
+        #     #         line_dist['sellindex'] + line_dist['buyindex'])
+        #     # mean_allvol = np.array(pd.Series(time_grav_dict[0]['buyvol']+time_grav_dict[0]['sellvol'] / 2).ewm(span=3 ** level+1, min_periods=1).mean())
+        #     index = np.arange(len(time_vol))
+        #     width = np.ones(len(time_vol))
+        #     # mean_allvol = np.array(pd.Series(time_vol).rolling(window=int(240 * 3 ** level), min_periods=240).sum())
         #
-        # t = time.perf_counter()
-        tmp = self.time_grav.get_ratio()
-        tmp['ratio'] = tmp['ratio'] / np.sqrt(1 + np.power((tmp['price'] / self.last_price - 1) / 0.1, 8))
-        tmp['ratio'] = tmp['ratio'] / np.max(tmp['ratio'])
-        tmp_lp_set, tmp_hp_set = self.filter_peak_list(tmp, self.last_price)
-        if len(tmp_lp_set) >= 5:
-            tmp_lp_set1 = get_peaks(tmp_lp_set)
-            if len(tmp_lp_set1) >= 3:
-                tmp_lp_set = tmp_lp_set1
-            else:
-                tmp_lp_set = np.sort(tmp_lp_set, order='ratio', kind='stable')[-3:]
-        elif len(tmp_lp_set) > 0:
-            tmp_lp_set = tmp_lp_set[np.argmax(tmp_lp_set['ratio'])]
-        else:
-            tmp_lp_set = []
-        if len(tmp_hp_set) >= 5:
-            tmp_hp_set1 = get_peaks(tmp_hp_set)
-            if len(tmp_hp_set1) >= 2:
-                tmp_hp_set = tmp_hp_set1
-            else:
-                tmp_hp_set = np.sort(tmp_hp_set, order='ratio', kind='stable')[-3:]
-        elif len(tmp_hp_set) > 0:
-            tmp_hp_set = tmp_hp_set[np.argmax(tmp_hp_set['ratio'])]
-        else:
-            tmp_hp_set = []
-        if len(tmp_hp_set) > 4:
-            tmp_hp_set = np.sort(tmp_hp_set, order='ratio', kind='stable')[-4:]
-        if len(tmp_lp_set) > 4:
-            tmp_lp_set = np.sort(tmp_lp_set, order='ratio', kind='stable')[-4:]
-
-        if len(tmp_hp_set) > 0 and len(tmp_lp_set) > 0:
-            zcyl_set = np.append(tmp_hp_set, tmp_lp_set)
-        elif len(tmp_hp_set) > 0 and len(tmp_lp_set) == 0:
-            zcyl_set = tmp_hp_set
-        elif len(tmp_hp_set) == 0 and len(tmp_lp_set) > 0:
-            zcyl_set = tmp_lp_set
-        else:
-            raise RuntimeError("无支撑压力")
-        self.zcyl = zcyl_set
+        #     # np.nan_to_num(mean_allvol, copy=False)
+        #     mean_allvol = np.cumsum(time_vol)
+        #     mean_buyvol = np.array(mean_allvol)
+        #     mean_sellvol = np.array(pd.Series(mean_allvol).ewm(span=240, min_periods=1).mean())
+        #     if level == 1:
+        #         mean_buyvol = np.where(time_vol > 0, time_vol, 0)
+        #         mean_sellvol = np.where(time_vol < 0, -time_vol, 0)
+        #         mean_buyvol = np.array(pd.Series(mean_buyvol).rolling(window=int(240), min_periods=240).sum())
+        #         mean_sellvol = np.array(
+        #             pd.Series(mean_sellvol).rolling(window=int(240), min_periods=240).sum())
+        #         np.nan_to_num(mean_buyvol, copy=False)
+        #         np.nan_to_num(mean_sellvol, copy=False)
+        #     if level == 2:
+        #         line_dist['buyindex'][np.where(line_dist['buyindex'] == 0)] = 1
+        #         line_dist['sellindex'][np.where(line_dist['sellindex'] == 0)] = 1
+        #         tmp_mean_buyvol = np.array(buy_volume_series.ewm(span=240, min_periods=240).mean())
+        #         tmp_mean_sellvol = np.array(sell_volume_series.ewm(span=240, min_periods=240).mean())
+        #         np.nan_to_num(tmp_mean_buyvol, copy=False)
+        #         np.nan_to_num(tmp_mean_sellvol, copy=False)
+        #         mean_buyvol = np.zeros(len(buy_index) + len(sell_index))
+        #         mean_sellvol = np.zeros(len(buy_index) + len(sell_index))
+        #         if flag:
+        #             mean_buyvol[::2] = tmp_mean_buyvol
+        #             mean_buyvol[1::2] = mean_buyvol[:-1:2]
+        #             mean_sellvol[1::2] = tmp_mean_sellvol
+        #             mean_sellvol[2::2] = mean_sellvol[1:-1:2]
+        #             mean_sellvol[0] = mean_sellvol[1]
+        #         else:
+        #             mean_sellvol[::2] = tmp_mean_sellvol
+        #             mean_sellvol[1::2] = mean_sellvol[:-1:2]
+        #             mean_buyvol[1::2] = tmp_mean_buyvol
+        #             mean_buyvol[2::2] = mean_buyvol[1:-1:2]
+        #             mean_buyvol[0] = mean_buyvol[1]
+        #
+        #         # mean_buyvol = np.array(pd.Series(time_grav_dict[0]['buyvol']).rolling(window=3 ** level * 2, min_periods=1).mean())
+        #         # mean_sellvol = np.array(pd.Series(time_grav_dict[0]['sellvol']).rolling(window=3 ** level * 2, min_periods=1).mean())
+        #         # buyvol = all_vol * buy_mask / dl
+        #         # sellvol = all_vol * sell_mask / dl
+        #     self.indicators.append(
+        #         {'name': '平均成交量 级别{}'.format(level),
+        #          'val': {'index': index, 'width': width, 'buyvol': mean_buyvol, 'sellvol': mean_sellvol}})
+        # # self.indicators.append({'name': '均线离散度',
+        # #                         'val': {'index': mid_index, 'short': short_lisandu, 'long': long_lisandu,
+        # #                                 'all': all_lisandu}})
+        # # short_mtm, mid_mtm, long_mtm = Indicators.MTM(self.trend_dict['short'], self.trend_dict['mid'],
+        # #                                               self.trend_dict['long'])
+        # # short_trend, long_trend = Indicators.trend(self.trend_dict['short'], self.trend_dict['mid'],
+        # #                                            self.trend_dict['long'])
+        # # self.indicators.append({'name': 'MTM',
+        # #                         'val': {'index': mid_index, 'short': short_mtm, 'mid': mid_mtm, 'long': long_mtm}})
+        # # self.indicators.append({'name': 'Trend',
+        # #                         'val': {'index': mid_index, 'short': short_trend, 'long': long_trend}})
+        # # print('calc indicators list', time.perf_counter() - t)
+        # #
+        # # t = time.perf_counter()
+        # tmp = self.time_grav.get_ratio()
+        # tmp['ratio'] = tmp['ratio'] / np.sqrt(1 + np.power((tmp['price'] / self.last_price - 1) / 0.1, 8))
+        # tmp['ratio'] = tmp['ratio'] / np.max(tmp['ratio'])
+        # tmp_lp_set, tmp_hp_set = self.filter_peak_list(tmp, self.last_price)
+        # if len(tmp_lp_set) >= 5:
+        #     tmp_lp_set1 = get_peaks(tmp_lp_set)
+        #     if len(tmp_lp_set1) >= 3:
+        #         tmp_lp_set = tmp_lp_set1
+        #     else:
+        #         tmp_lp_set = np.sort(tmp_lp_set, order='ratio', kind='stable')[-3:]
+        # elif len(tmp_lp_set) > 0:
+        #     tmp_lp_set = tmp_lp_set[np.argmax(tmp_lp_set['ratio'])]
+        # else:
+        #     tmp_lp_set = []
+        # if len(tmp_hp_set) >= 5:
+        #     tmp_hp_set1 = get_peaks(tmp_hp_set)
+        #     if len(tmp_hp_set1) >= 2:
+        #         tmp_hp_set = tmp_hp_set1
+        #     else:
+        #         tmp_hp_set = np.sort(tmp_hp_set, order='ratio', kind='stable')[-3:]
+        # elif len(tmp_hp_set) > 0:
+        #     tmp_hp_set = tmp_hp_set[np.argmax(tmp_hp_set['ratio'])]
+        # else:
+        #     tmp_hp_set = []
+        # if len(tmp_hp_set) > 4:
+        #     tmp_hp_set = np.sort(tmp_hp_set, order='ratio', kind='stable')[-4:]
+        # if len(tmp_lp_set) > 4:
+        #     tmp_lp_set = np.sort(tmp_lp_set, order='ratio', kind='stable')[-4:]
+        #
+        # if len(tmp_hp_set) > 0 and len(tmp_lp_set) > 0:
+        #     zcyl_set = np.append(tmp_hp_set, tmp_lp_set)
+        # elif len(tmp_hp_set) > 0 and len(tmp_lp_set) == 0:
+        #     zcyl_set = tmp_hp_set
+        # elif len(tmp_hp_set) == 0 and len(tmp_lp_set) > 0:
+        #     zcyl_set = tmp_lp_set
+        # else:
+        #     raise RuntimeError("无支撑压力")
+        # self.zcyl = zcyl_set
         # print('calc peak dist', time.perf_counter() - t)
         t_analyze = time.perf_counter() - t
         self.analyze_flag = True
         print("分析{} {}完成, 读取数据用时:{:.4f}s 分析用时:{:.4f}s".format(self.code.code, self.last_time,
                                                               t_read_data, t_analyze))
-        if self.show_result:
-            obj = RelativityVisualize(figure_title=self.code.code + ' ' + TimeTool.time_to_str(self.last_time),
-                                      indicators_num=len(self.indicators),
-                                      min_step=self.min_step)
-            obj.draw_main(points_set=self.time_grav.get_all_points(), last_price=self.last_price)
-            obj.draw_zcyl(zcyl_list=zcyl_set)
-            obj.draw_CM(space_gravitation_dist=cm_dist0)
-            obj.draw_CM_sum(space_gravitation_dist=cm_dist1)
-            obj.draw_qhs(qhs_index_list=qhs_index)
-            obj.draw_indicators(indicators_list=self.indicators)
-            # obj.draw_junxian(ma_list=ma_list_show)
-            # obj.draw_minp_line(min_price_list)
-            # obj.draw_ori_zcyl(zcyl_list=tmp_p_set)
-            obj.save(self.code.code + '_' + TimeTool.time_to_str(self.last_time, fmt='%Y%m%d%H%M%S'))
-            # obj.show()
+        # if self.show_result:
+        #     obj = RelativityVisualize(figure_title=self.code.code + ' ' + TimeTool.time_to_str(self.last_time),
+        #                               indicators_num=len(self.indicators),
+        #                               min_step=self.min_step)
+        #     obj.draw_main(points_set=self.time_grav.get_all_points(), last_price=self.last_price)
+        #     obj.draw_zcyl(zcyl_list=zcyl_set)
+        #     obj.draw_CM(space_gravitation_dist=cm_dist0)
+        #     obj.draw_CM_sum(space_gravitation_dist=cm_dist1)
+        #     obj.draw_qhs(qhs_index_list=qhs_index)
+        #     obj.draw_indicators(indicators_list=self.indicators)
+        #     # obj.draw_junxian(ma_list=ma_list_show)
+        #     # obj.draw_minp_line(min_price_list)
+        #     # obj.draw_ori_zcyl(zcyl_list=tmp_p_set)
+        #     obj.save(self.code.code + '_' + TimeTool.time_to_str(self.last_time, fmt='%Y%m%d%H%M%S'))
+        # obj.show()
+
+    def calc_indicator(self, indicator_name, **kwargs):
+        if indicator_name == '累积成交量':
+            return self._calc_volsum(**kwargs)
+        if indicator_name == '买卖成交量':
+            return self._calc_bsvol(**kwargs)
+        if indicator_name == 'VMACD':
+            return self._calc_VMACD(**kwargs)
+        if indicator_name == 'DP':
+            return self._calc_dp(**kwargs)
+        if indicator_name == 'BSDP':
+            return self._calc_bsdp(**kwargs)
+        if indicator_name == 'DPMACD':
+            return self._calc_DPMACD(**kwargs)
+
+    def get_all_indicators_name(self):
+        return '累积成交量', '买卖成交量', 'VMACD', 'DP', 'BSDP', 'DPMACD'
+
+    def _calc_bsdp(self, ma):
+        time_dp = self.indicators['time_dp']
+        res = dict()
+        res['x'] = np.arange(len(time_dp))
+        risedp = np.where(time_dp > 0, time_dp, 0)
+        downdp = np.where(time_dp < 0, -time_dp, 0)
+        risedp = np.array(pd.Series(risedp).rolling(window=240, min_periods=240).sum())
+        downdp = np.array(pd.Series(downdp).rolling(window=240, min_periods=240).sum())
+        np.nan_to_num(risedp, copy=False, nan=risedp[240])
+        np.nan_to_num(downdp, copy=False, nan=downdp[240])
+        if ma:
+            risedp = np.array(pd.Series(risedp).ewm(span=ma, min_periods=ma).mean())
+            downdp = np.array(pd.Series(downdp).ewm(span=ma, min_periods=ma).mean())
+            np.nan_to_num(risedp, copy=False, nan=risedp[ma])
+            np.nan_to_num(downdp, copy=False, nan=downdp[ma])
+        res['risedp'] = risedp
+        res['downdp'] = downdp
+        return res
+
+    def _calc_DPMACD(self, ma_fast, ma_slow, ma_dea):
+        time_dp = self.indicators['time_dp']
+        res = dict()
+        res['x'] = np.arange(len(time_dp))
+        dp_sum = np.cumsum(time_dp)
+        fast = np.array(pd.Series(dp_sum).ewm(span=ma_fast * 240, min_periods=ma_fast * 240).mean())
+        np.nan_to_num(fast, copy=False, nan=fast[ma_fast * 240])
+        slow = np.array(pd.Series(dp_sum).ewm(span=ma_slow * 240, min_periods=ma_slow * 240).mean())
+        np.nan_to_num(slow, copy=False, nan=fast[ma_slow * 240])
+        dif = fast - slow
+        dea = np.array(pd.Series(dif).ewm(span=ma_dea * 240, min_periods=ma_dea * 240).mean())
+        res['dif'] = dif
+        res['dea'] = dea
+        # res['vmacd'] = (dif-dea) * 2
+        return res
+
+    def _calc_bsvol(self, ma):
+        time_vol = self.indicators['time_vol']
+        res = dict()
+        res['x'] = np.arange(len(time_vol))
+        buyvol = np.where(time_vol > 0, time_vol, 0)
+        sellvol = np.where(time_vol < 0, -time_vol, 0)
+        buyvol = np.array(pd.Series(buyvol).rolling(window=240, min_periods=240).sum())
+        sellvol = np.array(pd.Series(sellvol).rolling(window=240, min_periods=240).sum())
+        np.nan_to_num(buyvol, copy=False, nan=buyvol[240])
+        np.nan_to_num(sellvol, copy=False, nan=sellvol[240])
+        if ma:
+            buyvol = np.array(pd.Series(buyvol).ewm(span=ma, min_periods=ma).mean())
+            sellvol = np.array(pd.Series(sellvol).ewm(span=ma, min_periods=ma).mean())
+            np.nan_to_num(buyvol, copy=False, nan=buyvol[ma])
+            np.nan_to_num(sellvol, copy=False, nan=sellvol[ma])
+        res['buyvol'] = buyvol
+        res['sellvol'] = sellvol
+        return res
+
+    def _calc_VMACD(self, ma_fast, ma_slow, ma_dea):
+        time_vol = self.indicators['time_vol']
+        res = dict()
+        res['x'] = np.arange(len(time_vol))
+        vol_sum = np.cumsum(time_vol)
+        fast = np.array(pd.Series(vol_sum).ewm(span=ma_fast * 240, min_periods=ma_fast * 240).mean())
+        np.nan_to_num(fast, copy=False, nan=fast[ma_fast * 240])
+        slow = np.array(pd.Series(vol_sum).ewm(span=ma_slow * 240, min_periods=ma_slow * 240).mean())
+        np.nan_to_num(slow, copy=False, nan=fast[ma_slow * 240])
+        dif = fast - slow
+        dea = np.array(pd.Series(dif).ewm(span=ma_dea * 240, min_periods=ma_dea * 240).mean())
+        res['dif'] = dif
+        res['dea'] = dea
+        # res['vmacd'] = (dif-dea) * 2
+        return res
+
+    def _calc_volsum(self, **kwargs):
+        time_vol = self.indicators['time_vol']
+        res = dict()
+        res['x'] = np.arange(len(time_vol))
+        res['vol'] = np.cumsum(time_vol)
+        # # mean_allvol = np.array(pd.Series(time_vol).rolling(window=int(240 * 3 ** level), min_periods=240).sum())
+        # mean_sellvol = np.array(pd.Series(mean_allvol).ewm(span=240, min_periods=1).mean())
+        return res
+
+    def _calc_dp(self, **kwargs):
+        time_dp = self.indicators['time_dp']
+        res = dict()
+        res['x'] = np.arange(len(time_dp))
+        res['dp'] = np.cumsum(time_dp)
+        return res
 
     def analyze_score(self):
-        # t = time.perf_counter()
         data = self.get_data()
         self.kdata = data.get_kdata(ANALYZE_FREQ)
-        # self.kdata.remove_zero_volume()  # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
-        if len(self.kdata) <= 8640:
-            print("{}数据太短啦, 开始时间{}, 结束时间{}".format(self.code.code,
-                                                   TimeTool.time_to_str(self.kdata.get_start_time()),
-                                                   TimeTool.time_to_str(self.kdata.get_last_time())))
+
+        if len(self.kdata) <= 7200:
+            print("数据太短啦")
             return None
-        # t_read_data = time.perf_counter() - t
-        # t = time.perf_counter()
+
+        self.last_price = self.kdata.get_last_price()
         high = np.array(self.kdata.data['high'])
         low = np.array(self.kdata.data['low'])
-        if self.code.market in [MarketType.Ashare.SH.ETF, MarketType.Ashare.SZ.ETF]:
-            self.min_step = 0.001
-        else:
-            self.min_step = 0.01
+        self.min_step = configure_step(self.code.market, self.last_price)
 
-        self.time_grav = relativity_cy.TimeGravitation(high, low, min_step=self.min_step,
-                                                       max_level=RELATIVITY_MAX_LEVEL)
+        self.time_grav = relativity_cy.TimeGravitation(high, low,
+                                                       step=self.min_step,
+                                                       max_level=int(RELATIVITY_MAX_LEVEL))
+
         score = self.time_grav.get_score()
-        # t_analyze = time.perf_counter() - t
-        # print("分析{}完成, 日期:{}, 得分:{}, 读取数据用时:{:.4f}s 分析用时:{:.4f}s".format(
-        #     self.code.code, TimeTool.time_to_str(self.kdata.get_last_time(), '%Y-%m-%d'), score, t_read_data,
-        #     t_analyze))
         return score
 
     @staticmethod

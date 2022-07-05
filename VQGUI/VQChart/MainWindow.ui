@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1440</width>
+    <height>899</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QFormLayout" name="formLayout">
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item row="0" column="0" colspan="2">
+     <widget class="ChartWidget" name="graphicsView"/>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1440</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu">
+    <property name="title">
+     <string>菜单</string>
+    </property>
+    <addaction name="action_OpenChart"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuVPVR">
+    <property name="title">
+     <string>VPVR</string>
+    </property>
+    <widget class="QMenu" name="menu_2">
+     <property name="title">
+      <string>全局显示</string>
+     </property>
+     <addaction name="action_VPVRshow"/>
+     <addaction name="separator"/>
+     <addaction name="action_VPVRStatic"/>
+     <addaction name="action_VPVRdynamic"/>
+    </widget>
+    <widget class="QMenu" name="menu_3">
+     <property name="title">
+      <string>单元显示</string>
+     </property>
+     <addaction name="action_UnitVPVRshow"/>
+     <addaction name="separator"/>
+     <addaction name="action_UnitVPVRByTime"/>
+     <addaction name="action_UnitVPVRByLevel"/>
+    </widget>
+    <widget class="QMenu" name="menu_4">
+     <property name="title">
+      <string>在这里输入</string>
+     </property>
+    </widget>
+    <addaction name="menu_2"/>
+    <addaction name="menu_3"/>
+    <addaction name="menu_4"/>
+   </widget>
+   <addaction name="menu"/>
+   <addaction name="menuVPVR"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar">
+   <property name="sizeGripEnabled">
+    <bool>false</bool>
+   </property>
+  </widget>
+  <widget class="QToolBar" name="toolBar">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="action_OpenChart"/>
+   <addaction name="action_AutoUpdateChart"/>
+   <addaction name="separator"/>
+   <addaction name="action_VPVRshow"/>
+   <addaction name="action_VPVRdynamic"/>
+   <addaction name="separator"/>
+   <addaction name="action_UnitVPVRshow"/>
+   <addaction name="action_UnitVPVRByTime"/>
+   <addaction name="action_UnitVPVRByLevel"/>
+   <addaction name="action_UnitVPVRByDay"/>
+   <addaction name="action_UnitVPVRByLevel4"/>
+   <addaction name="separator"/>
+   <addaction name="action_ShowIndChart"/>
+   <addaction name="action_HideIndChart"/>
+   <addaction name="action_SelectInd"/>
+  </widget>
+  <action name="action_AutoUpdateChart">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>开始自动更新</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;开始/停止更新&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="action_OpenChart">
+   <property name="text">
+    <string>打开图表</string>
+   </property>
+  </action>
+  <action name="action_VPVRStatic">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>静态VPVR</string>
+   </property>
+  </action>
+  <action name="action_VPVRdynamic">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>动态VPVR</string>
+   </property>
+  </action>
+  <action name="action_UnitVPVRshow">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>显示UnitVPVR</string>
+   </property>
+  </action>
+  <action name="action_VPVRshow">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>显示VPVR</string>
+   </property>
+  </action>
+  <action name="action_UnitVPVRByTime">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>按时间分隔</string>
+   </property>
+  </action>
+  <action name="action_UnitVPVRByLevel">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>按级别分隔</string>
+   </property>
+  </action>
+  <action name="action_UnitVPVRByDay">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>按日分隔</string>
+   </property>
+  </action>
+  <action name="action_UnitVPVRByLevel4">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>按级别4分隔</string>
+   </property>
+  </action>
+  <action name="action_ShowIndChart">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>显示指标图</string>
+   </property>
+  </action>
+  <action name="action_HideIndChart">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>隐藏指标图</string>
+   </property>
+  </action>
+  <action name="action_SelectInd">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>选择指标</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ChartWidget</class>
+   <extends>QGraphicsView</extends>
+   <header>VQGUI.VQChart.ChartWidget</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

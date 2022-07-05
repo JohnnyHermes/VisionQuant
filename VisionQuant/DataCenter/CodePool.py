@@ -78,8 +78,9 @@ class AshareCodePool(CodePool):
                                          end_time=end_time, frequency=frequency))
                 return codelist
             else:
+                values = [x.value for x in selected_market]
                 for _code, _name, _market in zip(self.code_df['code'], self.code_df['name'], self.code_df['market']):
-                    if _market in selected_market:
+                    if _market in values:
                         codelist.append(Code(code=_code, name=_name, market=_market, start_time=start_time,
                                              end_time=end_time, frequency=frequency))
                 return codelist

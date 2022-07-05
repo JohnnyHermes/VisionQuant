@@ -6,7 +6,7 @@ from VisionQuant.DataCenter.DataServer import DataServer, KDataServer
 from VisionQuant.utils.Params import REQUEST_HEADER_LEN, REQUEST_HEAD_KDATA, REQUEST_HEAD_DATASERVER_SETTINGS, \
     REQUEST_HEAD_BASIC_FINANCE_DATA, HQSERVER_HOST, HQSERVER_PORT
 
-data_server = DataServer()
+data_server = DataServer(force_live=True)
 
 
 class RequestHeaderRecvFailed(Exception):

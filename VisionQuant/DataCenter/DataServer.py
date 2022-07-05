@@ -1,4 +1,5 @@
 import datetime
+
 import psutil
 import pandas as pd
 
@@ -7,6 +8,11 @@ from VisionQuant.DataStruct.AShare import AShare
 from VisionQuant.utils.Code import Code
 from VisionQuant.utils import TimeTool
 from VisionQuant.utils.Params import DATASERVER_MIN_FREE_MEM, MarketType
+
+from threading import Semaphore
+
+# 加一个信号锁，HqServer多线程时不会导致与Tdx服务器socket通信发生错误
+semaphore = Semaphore(1)
 
 
 class KDataServer:
@@ -18,96 +24,99 @@ class KDataServer:
         self._last_update_time = TimeTool.get_now_time(return_type='datetime')
 
     def get_data(self, code: Code):
-        print("send kdata: {} start_time:{} end_time:{}".format(code.code, code.start_time, code.end_time))
-        code_key = self.get_code_key(code)
-        if code_key not in self.data_dict.keys():
-            self.check_free_mem()
-            self._add_local_data(code)
-        if self.force_live:
-            self._update_data(code)
-            data = self.data_dict[code_key].filter(key='time', start=code.start_time, freqs=code.frequency)
-            return data
-        else:
-            not_available_freqs = []
-            available_freqs = self.data_dict[code_key].get_freqs()
-            if isinstance(code.frequency, list):
-                for freq in code.frequency:
-                    if freq not in available_freqs:
-                        not_available_freqs.append(freq)
-            else:
-                if code.frequency not in available_freqs:
-                    not_available_freqs.append(code.frequency)
-            if not_available_freqs:
-                tmp_code = code.copy()
-                tmp_code.frequency = not_available_freqs
-                self.add_new_freq_kdata(tmp_code)
-
-            end_date = TimeTool.time_to_str(code.end_time, '%Y-%m-%d')
-            nearest_trade_date_end = TimeTool.get_nearest_trade_date(code.end_time, code.market, flag='end')
-            nearest_trade_date_start = TimeTool.get_nearest_trade_date(code.start_time, code.market, flag='start')
-            data_last_date = self.data_dict[code_key].get_last_time(code.frequency)
-            data_start_date = self.data_dict[code_key].get_start_time(code.frequency)
-            # print("本地数据范围：{} {}".format(data_start_date,data_last_date))
-            # print(data_start_date, data_last_date, nearest_trade_date_start, nearest_trade_date_end)
-            if isinstance(code.frequency, list):
-                tmp_code = code.copy()
-
-                repair_freqs = []
-                for freq, start_date in data_start_date.items():
-                    _start_date = TimeTool.time_to_str(start_date, '%Y-%m-%d')
-                    if _start_date is None or _start_date > nearest_trade_date_start:
-                        repair_freqs.append(freq)
-                tmp_code.frequency = repair_freqs
-                self._repair_data(tmp_code)
-
-                update_freqs = []
-                for freq, last_date in data_last_date.items():
-                    _last_date = TimeTool.time_to_str(last_date, '%Y-%m-%d')
-                    if _last_date is None:
-                        update_freqs.append(freq)
-                    elif _last_date < end_date:
-                        if _last_date < nearest_trade_date_end:
-                            update_freqs.append(freq)
-                    elif _last_date == end_date:
-                        if TimeTool.is_trade_time(code.market):
-                            update_freqs.append(freq)
-                tmp_code.frequency = update_freqs
-                self._update_data(tmp_code)
-
-                data_last_date = TimeTool.time_to_str(self.data_dict[code_key].get_last_time(
-                    code.frequency[0]), '%Y-%m-%d')
-                if data_last_date == end_date:
-                    data = self.data_dict[code_key].filter(key='time', start=code.start_time, freqs=code.frequency)
-                else:
-                    data = self.data_dict[code_key].filter(key='time', start=code.start_time, end=code.end_time,
-                                                           freqs=code.frequency)
+        if semaphore.acquire():
+            code_key = self.get_code_key(code)
+            if code_key not in self.data_dict.keys():
+                self.check_free_mem()
+                self._add_local_data(code)
+            if self.force_live:
+                self._update_data(code)
+                data = self.data_dict[code_key].filter(key='time', start=code.start_time, freqs=code.frequency)
+                print("send kdata: {} start_time:{} end_time:{}".format(code.code, code.start_time, code.end_time))
+                semaphore.release()
                 return data
             else:
-                data_last_date = TimeTool.time_to_str(data_last_date, '%Y-%m-%d')
-                data_start_date = TimeTool.time_to_str(data_start_date, '%Y-%m-%d')
-                if data_start_date is None or data_start_date > nearest_trade_date_start:
-                    self._repair_data(code)
+                not_available_freqs = []
+                available_freqs = self.data_dict[code_key].get_freqs()
+                if isinstance(code.frequency, list):
+                    for freq in code.frequency:
+                        if freq not in available_freqs:
+                            not_available_freqs.append(freq)
+                else:
+                    if code.frequency not in available_freqs:
+                        not_available_freqs.append(code.frequency)
+                if not_available_freqs:
+                    tmp_code = code.copy()
+                    tmp_code.frequency = not_available_freqs
+                    self.add_new_freq_kdata(tmp_code)
 
-                if data_last_date is None:
-                    self._update_data(code)
-                    data = self.data_dict[code_key].filter(key='time', start=code.start_time, end=code.end_time,
-                                                           freqs=code.frequency)
-                    return data
-                elif data_last_date < end_date:
-                    if data_last_date < nearest_trade_date_end:
-                        self._update_data(code)
-                    data = self.data_dict[code_key].filter(key='time', start=code.start_time, end=code.end_time,
-                                                           freqs=code.frequency)
-                    return data
-                elif data_last_date == end_date:
-                    if TimeTool.is_trade_time(code.market):
-                        self._update_data(code)
-                    data = self.data_dict[code_key].filter(key='time', start=code.start_time,
-                                                           freqs=code.frequency)
+                end_date = TimeTool.time_to_str(code.end_time, '%Y-%m-%d')
+                nearest_trade_date_end = TimeTool.get_nearest_trade_date(code.end_time, code.market, flag='end')
+                nearest_trade_date_start = TimeTool.get_nearest_trade_date(code.start_time, code.market, flag='start')
+                data_last_date = self.data_dict[code_key].get_last_time(code.frequency)
+                data_start_date = self.data_dict[code_key].get_start_time(code.frequency)
+                # print("本地数据范围：{} {}".format(data_start_date,data_last_date))
+                # print(data_start_date, data_last_date, nearest_trade_date_start, nearest_trade_date_end)
+                if isinstance(code.frequency, list):
+                    tmp_code = code.copy()
+
+                    repair_freqs = []
+                    for freq, start_date in data_start_date.items():
+                        _start_date = TimeTool.time_to_str(start_date, '%Y-%m-%d')
+                        if _start_date is None or _start_date > nearest_trade_date_start:
+                            repair_freqs.append(freq)
+                    tmp_code.frequency = repair_freqs
+                    self._repair_data(tmp_code)
+
+                    update_freqs = []
+                    for freq, last_date in data_last_date.items():
+                        _last_date = TimeTool.time_to_str(last_date, '%Y-%m-%d')
+                        if _last_date is None:
+                            update_freqs.append(freq)
+                        elif _last_date < end_date:
+                            if _last_date < nearest_trade_date_end:
+                                update_freqs.append(freq)
+                        elif _last_date == end_date:
+                            if TimeTool.is_trade_time(code.market):
+                                update_freqs.append(freq)
+                    tmp_code.frequency = update_freqs
+                    self._update_data(tmp_code)
+
+                    data_last_date = TimeTool.time_to_str(self.data_dict[code_key].get_last_time(
+                        code.frequency[0]), '%Y-%m-%d')
+                    if data_last_date == end_date:
+                        data = self.data_dict[code_key].filter(key='time', start=code.start_time, freqs=code.frequency)
+                    else:
+                        data = self.data_dict[code_key].filter(key='time', start=code.start_time, end=code.end_time,
+                                                               freqs=code.frequency)
+                    print("send kdata: {} start_time:{} end_time:{}".format(code.code, code.start_time, code.end_time))
+                    semaphore.release()
                     return data
                 else:
-                    data = self.data_dict[code_key].filter(key='time', start=code.start_time, end=code.end_time,
-                                                           freqs=code.frequency)
+                    data_last_date = TimeTool.time_to_str(data_last_date, '%Y-%m-%d')
+                    data_start_date = TimeTool.time_to_str(data_start_date, '%Y-%m-%d')
+                    if data_start_date is None or data_start_date > nearest_trade_date_start:
+                        self._repair_data(code)
+
+                    if data_last_date is None:
+                        self._update_data(code)
+                        data = self.data_dict[code_key].filter(key='time', start=code.start_time, end=code.end_time,
+                                                               freqs=code.frequency)
+                    elif data_last_date < end_date:
+                        if data_last_date < nearest_trade_date_end:
+                            self._update_data(code)
+                        data = self.data_dict[code_key].filter(key='time', start=code.start_time, end=code.end_time,
+                                                               freqs=code.frequency)
+                    elif data_last_date == end_date:
+                        if TimeTool.is_trade_time(code.market):
+                            self._update_data(code)
+                        data = self.data_dict[code_key].filter(key='time', start=code.start_time,
+                                                               freqs=code.frequency)
+                    else:
+                        data = self.data_dict[code_key].filter(key='time', start=code.start_time, end=code.end_time,
+                                                               freqs=code.frequency)
+                    print("send kdata: {} start_time:{} end_time:{}".format(code.code, code.start_time, code.end_time))
+                    semaphore.release()
                     return data
 
     def add_new_freq_kdata(self, code: Code):
