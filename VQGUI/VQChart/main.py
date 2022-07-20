@@ -141,6 +141,9 @@ class MainWindow(QMainWindow):
             return indicator_protocol(self.chart_widget.analyze_result, ind_name, ma=30)
         if ind_name == 'DPMACD':
             return indicator_protocol(self.chart_widget.analyze_result, ind_name, ma_fast=1, ma_slow=3, ma_dea=3)
+        if ind_name == 'UnitVol':
+            return indicator_protocol(self.chart_widget.analyze_result, ind_name,
+                                      level=self._level, interval=self._interval)
 
     def on_action_VPVRshow_triggered(self):
         flag = self.ui.action_VPVRshow.isChecked()
@@ -180,12 +183,11 @@ class MainWindow(QMainWindow):
                 self.chart_widget.main_chart.remove_item(item_name)
 
     def on_action_UnitVPVRByTime_triggered(self):
-
         dialogTitle = "输入对话框"
         textLabel = "请输入分钟间隔"
         default_value = 240
         min_value = 30
-        max_value = 1200
+        max_value = 2400
         step_value = 30
         interval, OK = QInputDialog.getInt(self, dialogTitle, textLabel, default_value,
                                            min_value, max_value, step_value)
@@ -343,6 +345,12 @@ class MainWindow(QMainWindow):
             data_list += vpvr_data_protocol(ana_result, x_range_list=[(None, end_index)], name_list=['vpvr'])
         return data_list
 
+    def _show_UnitVol_data(self):
+        if self.chart_widget.get_plot('indicator'):
+            data = self._indicator_protocol('UnitVol')
+            self.show_indicator(data)
+            self._current_ind_name = 'UnitVol'
+
     def _show_VPVR_data(self, ana_result):
         show_data_list = []
         mc_res = []
@@ -366,6 +374,7 @@ class MainWindow(QMainWindow):
         main_chart_dict = {'plot_name': 'main', 'data': mc_res}
         show_data_list.append(main_chart_dict)
         self.chart_widget.show_plots(show_data_list)
+        # self._show_UnitVol_data()
 
     def _on_analyze_finished(self, res_data: dict):
         ret, ana_result, callback = res_data['ret'], res_data['ana_result'], res_data['callback']

@@ -52,6 +52,12 @@ class MarketType(object):
         class BJ(Enum):
             STOCK = 11
 
+    class Future(Enum):
+        DS = 29
+        ZS = 28
+        SQ = 30
+        ZJ = 47
+
     @staticmethod
     def is_ashare(market):
         if market in [MarketType.Ashare, MarketType.Ashare.SH, MarketType.Ashare.SZ, MarketType.Ashare.SZ.STOCK,
@@ -62,8 +68,13 @@ class MarketType(object):
         else:
             return 0
 
-class Future(object):
-    pass
+    @staticmethod
+    def is_future(market):
+        if market in (MarketType.Future.DS,MarketType.Future.ZS,MarketType.Future.SQ,
+                      MarketType.Future.ZJ,MarketType.Future):
+            return 1
+        else:
+            return 0
 
 
 class Crypto(object):
@@ -76,6 +87,8 @@ K线周期
 
 
 class Freq(Enum):
+    SEC5 = '5sec'
+    SEC15 = '15sec'
     MIN1 = '1'
     MIN5 = '5'
     MIN15 = '15'

@@ -389,6 +389,8 @@ class Relativity(StrategyBase):
             return self._calc_bsdp(**kwargs)
         if indicator_name == 'DPMACD':
             return self._calc_DPMACD(**kwargs)
+        if indicator_name == 'UnitVol':
+            return self._calc_unitvol(**kwargs)
 
     def get_all_indicators_name(self):
         return '累积成交量', '买卖成交量', 'VMACD', 'DP', 'BSDP', 'DPMACD'
@@ -477,6 +479,32 @@ class Relativity(StrategyBase):
         res = dict()
         res['x'] = np.arange(len(time_dp))
         res['dp'] = np.cumsum(time_dp)
+        return res
+
+    def _calc_unitvol(self, **kwargs):
+        res = dict()
+        if kwargs['level'] is not None:
+            level = kwargs['level']
+            line = self.time_grav.time_grav_dict[level]
+            index = line['index']
+            dindex = line['dindex']
+            all_vol = line['buyvol'] + line['sellvol']
+            val = all_vol / dindex
+            x = (2 * index - dindex) / 2
+            res['x'] = x
+            res['volume'] = val
+        else:
+            last_index = len(self.kdata.data['volume']) - 1
+            interval = kwargs['interval']
+            now_index = last_index - interval
+            volsum = np.cumsum(self.kdata.data['volume'])
+            x = []
+            volume = []
+            while now_index > 0:
+                x.append((2 * now_index + interval) / 2)
+                volume.append(volsum[now_index + interval] - volsum[now_index])
+                now_index -= interval
+            res = {'x': x, 'volume': volume}
         return res
 
     def analyze_score(self):

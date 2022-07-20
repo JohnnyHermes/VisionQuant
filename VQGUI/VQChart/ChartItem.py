@@ -17,7 +17,7 @@ from VQGUI.VQChart.TimeAxis import TimeAxis
 class LineItem(pg.PlotCurveItem):
     def __init__(self, name=None, *args, **kargs):
         super().__init__(*args, **kargs)
-        # self.setFlag(self.ItemUsesExtendedStyleOption)
+        self.setFlag(self.ItemUsesExtendedStyleOption)
         self.set_name(name)
 
     def set_name(self, name):
@@ -152,7 +152,6 @@ class VPVRItem(pg.GraphicsObject):
         p.end()
         # self.prepareGeometryChange()
 
-
     def paint(self, p, *args):
         if self.picture is None:
             self.draw()
@@ -257,6 +256,11 @@ class VPVRTextItem(pg.GraphicsObject):
         # s.sigPrepareForPaint.connect(self.updateTransfrom)
         # self.updateTransform()
         # p.setTransform(self.sceneTransform())
+
+
+class DrawLineItem(pg.InfiniteLine):
+    def __init__(self):
+        super().__init__()
 
 
 class PriceLabelItem(pg.InfiniteLine):

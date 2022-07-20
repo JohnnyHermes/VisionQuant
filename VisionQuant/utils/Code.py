@@ -71,6 +71,26 @@ def determine_market(code: str, selected_market=None, return_type=MarketType):
             res = MarketType.Ashare.SZ.BOND
         else:
             res = MarketType.Ashare.SZ.OTHERS
+    elif selected_market is MarketType.Future:
+        ch = code[:2]
+        if ch[1] in ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9') or len(code) in (3, 5):
+            if ch[0] in ('A', 'B', 'C', 'I', 'J', 'L', 'M', 'P', 'V', 'Y'):
+                res = MarketType.Future.DS
+            elif ch[0] == 'T':
+                res = MarketType.Future.ZJ
+        elif ch in ('IC', 'IF', 'IH', 'TF', 'T', 'TS'):
+            res = MarketType.Future.ZJ
+        elif ch in ('AP', 'CF', 'CJ', 'CY', 'FG', 'JR', 'LR', 'MA', 'OI', 'PF', 'PK', 'PM',
+                    'RI', 'RM', 'RS', 'SA', 'SF', 'SM', 'SR', 'TA', 'UR', 'WH', 'ZC'):
+            res = MarketType.Future.ZS
+        elif ch in ('A', 'BB', 'B', 'C', 'CS', 'EB', 'EG', 'FB', 'I', 'JD', 'J', 'JM', 'LH',
+                    'L', 'M', 'PG', 'P', 'PP', 'RR', 'V', 'Y'):
+            res = MarketType.Future.DS
+        elif ch in ('AG', 'AL', 'AU', 'BC', 'BU', 'CU', 'FU', 'HC', 'LU', 'NI', 'NR', 'PB',
+                    'RB', 'RU', 'SC', 'SN', 'SP', 'SS', 'WR', 'ZN'):
+            res = MarketType.Future.SQ
+        else:
+            raise ValueError("错误的代码")
     else:
         if ch == '60':
             res = MarketType.Ashare.SH.STOCK
@@ -113,6 +133,14 @@ def select_markettype(i):
         return MarketType.Ashare.SH.OTHERS
     elif i == 11:
         return MarketType.Ashare.BJ.STOCK
+    elif i == 29:
+        return MarketType.Future.DS
+    elif i == 28:
+        return MarketType.Future.ZS
+    elif i == 30:
+        return MarketType.Future.SQ
+    elif i == 47:
+        return MarketType.Future.ZJ
     else:
         raise ValueError
 
@@ -130,7 +158,11 @@ def code_transform(code: str):
         # 掘金股票代码格式 'SHSE.600000'
         # Wind股票代码格式 '600000.SH'
         # 天软股票代码格式 'SH600000'
+        if len(code) < 6:
+            return code, MarketType.Future
         if len(code) == 6:
+            if code[0] not in ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9'):
+                return code, MarketType.Future
             return code, None
         if len(code) == 9:
             tmp = code.split(".")
@@ -196,12 +228,9 @@ class Code:
 
 
 if __name__ == '__main__':
-    cod = Code('600001')
-    cod1 = cod.copy()
-    print(cod)
-    print(cod1)
-    from VisionQuant.DataCenter.DataFetch import DataSource
-
-    cod1.data_source_local = DataSource.Local.Default
-    print(cod.data_source_local)
-    print(cod1.data_source_local)
+    # cod = Code('600001')
+    # cod1 = cod.copy()
+    # print(cod)
+    # print(cod1)
+    c = Code('AUL8')
+    print(c.market)

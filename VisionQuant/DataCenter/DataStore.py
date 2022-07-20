@@ -13,6 +13,8 @@ def kdata_store_market_transform(_market):
     elif _market in [MarketType.Ashare.SZ, MarketType.Ashare.SZ.STOCK, MarketType.Ashare.SZ.ETF,
                      MarketType.Ashare.SZ.INDEX, MarketType.Ashare.SZ.CYB]:
         return 'Ashare', 'sz'
+    elif MarketType.is_future(_market):
+        return 'Future', _market.name
     else:
         logger.critical("错误的市场类型!")
         raise ValueError("错误的市场类型")
@@ -38,7 +40,30 @@ def store_kdata_to_hdf5(datastruct):
         logger.error("打开{}失败, 详细信息: {}{}".format(fpath, e.__class__, e))
         raise e
     except Exception as e:
-        logger.critical("储存文件时发生错误！详细信息: {}{}".format(e.__class__,e))
+        logger.critical("储存文件时发生错误！详细信息: {}{}".format(e.__class__, e))
+        raise e
+    else:
+        for freq in datastruct.get_freqs():
+            kdata = datastruct.get_kdata(freq)
+            if len(kdata) > 0:
+                store.put(key='_' + freq.value, value=kdata.data)
+        store.close()
+
+
+def store_tickdata_to_hdf5(datastruct):
+    try:
+        market, market_type = kdata_store_market_transform(datastruct.code.market)
+        if market_type is None:
+            fname = datastruct.code.code + '.h5'
+        else:
+            fname = market_type + datastruct.code.code + '.h5'
+        fpath = Path('/'.join([LOCAL_DIR, 'TickData', market, fname]))
+        store = pd.HDFStore(fpath, complib=HDF5_COMPLIB, complevel=HDF5_COMP_LEVEL)
+    except HDF5ExtError as e:
+        logger.error("打开{}失败, 详细信息: {}{}".format(fpath, e.__class__, e))
+        raise e
+    except Exception as e:
+        logger.critical("储存文件时发生错误！详细信息: {}{}".format(e.__class__, e))
         raise e
     else:
         for freq in datastruct.get_freqs():
@@ -84,7 +109,7 @@ def store_blocks_score_data_to_hdf5(result_df, market=MarketType.Ashare, append=
         store.close()
 
 
-def store_code_list_stock(list_df, market):
+def store_code_list(list_df, market):
     market_str = anadata_store_market_transform(market)
     fpath = Path('/'.join([LOCAL_DIR, 'code_list_' + market_str + '.csv']))
     list_df.to_csv(fpath, encoding='utf-8', index=False)
@@ -114,6 +139,7 @@ def store_update_failed_codelist(codelist: list, date: str, market=MarketType.As
         print(all_str)
         f.write(all_str)
 
+
 if __name__ == '__main__':
-    codelist = ['123456','456789']
-    store_update_failed_codelist(codelist,date='2022-06-23')
+    codelist = ['123456', '456789']
+    store_update_failed_codelist(codelist, date='2022-06-23')

@@ -7,6 +7,11 @@ class AShare(BaseDataStruct):
         super().__init__(code, kdata_dict)
 
 
+class Future(BaseDataStruct):
+    def __init__(self, code, kdata_dict):
+        super().__init__(code, kdata_dict, columns=['time', 'open', 'close', 'high', 'low', 'volume', 'position'])
+
+
 if __name__ == '__main__':
     from VisionQuant.DataCenter import DataFetch, VQTdx
     from VisionQuant.utils.Code import Code

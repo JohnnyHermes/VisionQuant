@@ -9,7 +9,7 @@ from VisionQuant.DataCenter.DataFetch import DataSource, FetchDataFailed, Ashare
 from VisionQuant.utils.Params import MarketType, Freq
 from VisionQuant.Analysis.Relativity.Relativity import Relativity, RELATIVITY_MAX_LEVEL
 from VisionQuant.DataCenter.CodePool import AshareCodePool
-from VisionQuant.DataCenter.DataStore import store_code_list_stock, store_blocks_data, \
+from VisionQuant.DataCenter.DataStore import store_code_list, store_blocks_data, \
     store_basic_finance_data, store_kdata_to_hdf5, store_update_failed_codelist, store_relativity_score_data_to_hdf5, \
     store_blocks_score_data_to_hdf5
 from VisionQuant.utils import TimeTool
@@ -253,7 +253,7 @@ class AshareDataUpdate(DataUpdateBase):
             logger.error("获取A股股票列表数据失败! 详细信息见日志文件")
         else:
             try:
-                store_code_list_stock(self.code_pool.code_df, MarketType.Ashare)
+                store_code_list(self.code_pool.code_df, MarketType.Ashare)
             except Exception as e:
                 logger.error("储存A股股票列表数据失败! 详细信息: {}{}".format(e.__class__, e))
             else:

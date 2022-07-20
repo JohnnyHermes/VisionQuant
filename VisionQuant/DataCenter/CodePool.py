@@ -19,6 +19,75 @@ class CodePool:
         raise NotImplementedError("没有重写该方法")
 
 
+class FutureCodePool(CodePool):
+
+    def __init__(self, codelist_data_source=DEFAULT_CODELIST_DATASOURCE):
+        super().__init__(codelist_data_source)
+
+    def get_code(self, code, start_time=None, end_time=None, frequency=None):
+        if self.code_df is None:
+            self.get_code_df()
+        if isinstance(code, str):
+            res = Code(code=code,
+                       start_time=start_time, end_time=end_time,
+                       frequency=frequency)
+            name = self.code_df[(self.code_df['code'] == res.code) &
+                                (self.code_df['market'] == res.market.value)].name.values[0]
+            res.name = name
+            # if not isinstance(code_line, Series):
+            #     code_line = code_line.to_dict(orient='records')[0]
+            return res
+        elif isinstance(code, tuple):
+            _code, market = code
+            res = Code(code=_code,
+                       market=market,
+                       start_time=start_time, end_time=end_time,
+                       frequency=frequency)
+            name = self.code_df[(self.code_df['code'] == res.code) &
+                                (self.code_df['market'] == res.market.value)].name.values[0]
+            res.name = name
+            return res
+        else:
+            logger.critical("错误的code参数类型!")
+            raise ValueError("错误的code参数类型!")
+
+    def get_all_code(self, start_time=None, end_time=None, frequency=None, return_type=dict, selected_market=None):
+        if self.code_df is None:
+            self.get_code_df()
+        if return_type == dict:
+            codedict = dict()
+            for _code, _name, _market in zip(self.code_df['code'], self.code_df['name'], self.code_df['market']):
+                codedict[_code] = Code(code=_code, name=_name, market=_market, start_time=start_time,
+                                           end_time=end_time, frequency=frequency)
+            return codedict
+        else:
+            codelist = []
+            if selected_market is None:
+                for _code, _name, _market in zip(self.code_df['code'], self.code_df['name'], self.code_df['market']):
+                    codelist.append(Code(code=_code, name=_name, market=_market, start_time=start_time,
+                                         end_time=end_time, frequency=frequency))
+                return codelist
+            else:
+                values = [x.value for x in selected_market]
+                for _code, _name, _market in zip(self.code_df['code'], self.code_df['name'], self.code_df['market']):
+                    if _market in values:
+                        codelist.append(Code(code=_code, name=_name, market=_market, start_time=start_time,
+                                             end_time=end_time, frequency=frequency))
+                return codelist
+
+    def get_code_df(self):
+        sk = self.codelist_data_source.sk_client().init_socket()
+        try:
+            data = self.codelist_data_source.fetch_codelist(sk, market=MarketType.Future).set_index('code', drop=False)
+        except Exception as e:
+            logger.error("获取code_df失败，详细信息: {}{}".format(e.__class__, e))
+            raise RuntimeError('获取code_df失败')
+        else:
+            self.code_df = data
+        finally:
+            sk.close()
+
+
 class AshareCodePool(CodePool):
 
     def __init__(self, codelist_data_source=DEFAULT_CODELIST_DATASOURCE,
@@ -124,14 +193,16 @@ class AshareCodePool(CodePool):
 
 if __name__ == '__main__':
     # print(get_ashare_stock_list())
-    test_pool = AshareCodePool()
-    test_list = ['999999', '600519', '399006', ('000688', MarketType.Ashare.SH.INDEX)]
+    # test_pool = AshareCodePool()
+    # test_list = ['999999', '600519', '399006', ('000688', MarketType.Ashare.SH.INDEX)]
+    test_pool = FutureCodePool()
+    test_list = ['RBL8','FGL8','LHL8','ICL8','BCL8']
     test_code_list = []
     for test_code in test_list:
         test_code_list.append(test_pool.get_code(test_code))
-    test_all_code_list = test_pool.get_all_code(return_type=list)
-    for code in test_all_code_list:
-        print(code.code, code.name, code.market)
+    # test_all_code_list = test_pool.get_all_code(return_type=list)
+    for _code in test_code_list:
+        print(_code.code, _code.name, _code.market)
     # test_codedict = test_pool.get_code(['999999', '600519', '399006', ('000688', MarketType.Ashare.SH.INDEX)])
     # for test_code in test_codedict.values():
     #     print(test_code.code, test_code.name, test_code.market)

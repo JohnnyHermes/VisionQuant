@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from VisionQuant.DataCenter.VQTdx.TdxHqAPI import ResponseRecvFailed, SendRequestPkgFailed, ResponseHeaderRecvFailed
 from VisionQuant.utils import TimeTool, JsonTool
-from VisionQuant.DataCenter.VQTdx.TdxSocketClient import TdxStdHqSocketClient
+from VisionQuant.DataCenter.VQTdx.TdxSocketClient import TdxStdHqSocketClient, TdxExtHqSocketClient
 from VisionQuant.DataCenter.VQTdx.TdxReader import TdxStdReader
 from VisionQuant.utils.Params import MarketType, LOCAL_DIR, HDF5_COMPLIB, HDF5_COMP_LEVEL, EXCEPT_CODELIST, REMOTE_ADDR, \
     ASHARE_LOCAL_DATASOURCE, ASHARE_LIVE_DATASOURCE, CODELIST_DATASOURCE, \
@@ -111,6 +111,51 @@ class DataSourceTdxLive(DataSourceBase):
         pass
 
 
+class DataSourceExtTdxLive(DataSourceBase):
+    name = 'tdx_live'
+    sk_client = TdxExtHqSocketClient
+
+    @staticmethod
+    @retry(stop_max_attempt_number=5)
+    def fetch_kdata(socket_client, code):
+        try:
+            fetched_kdata = socket_client.api.get_kdata(socket_client.socket,
+                                                        code=code.code,
+                                                        market=code.market.value,
+                                                        freq=code.frequency,  # 这里不同访问freq的value属性，api自动转换
+                                                        count=700)
+            print(1)
+        except (ResponseRecvFailed, SendRequestPkgFailed, timeout, ResponseHeaderRecvFailed):
+            logger.warning("连接至通达信服务器失败，重新尝试链接...")
+            flg = socket_client.reconnect()
+            if flg:
+                logger.info("重新连接至通达信服务器成功")
+            raise ResponseRecvFailed
+        else:
+            if len(fetched_kdata) == 0:
+                return fetched_kdata
+            fix = 2
+            if code.market == MarketType.Future.ZJ and code.code[0] == 'T':
+                fix = 3
+            fix_columns = ['open', 'close', 'high', 'low']
+            fetched_kdata[fix_columns] = fetched_kdata[fix_columns].apply(np.round, args=(fix,))
+            fetched_kdata['volume'] = fetched_kdata['volume'].astype(np.float64)
+            # for name in ('open','close','high','low')
+            # fetched_kdata[]
+            # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
+            # fetched_kdata.drop(fetched_kdata[fetched_kdata['volume'] == 0].index, inplace=True)
+            # fetched_kdata.reset_index(drop=True, inplace=True)
+        return fetched_kdata
+
+    @staticmethod
+    @retry(stop_max_attempt_number=5)
+    def fetch_codelist(socket_client, market=MarketType.Ashare):
+        pass
+
+    def fetch_latest_quotes(self, sock_client, code: object):
+        pass
+
+
 class DataSourceTdxLocal(DataSourceBase):
     name = 'tdx_local'
     sk_client = TdxStdReader
@@ -137,14 +182,14 @@ class LocalReaderAPI(object):
             store = pd.HDFStore(datapath, mode='r', complib=HDF5_COMPLIB, complevel=HDF5_COMP_LEVEL)
         except OSError as e:
             print(e)
-            return pd.DataFrame(columns=['time', 'open', 'close', 'high', 'low', 'volume', 'amount'])
+            return pd.DataFrame(columns=['time', 'open', 'close', 'high', 'low', 'volume'])
         else:
             try:
                 df = store.get('_' + freq)
             except KeyError:
                 print("未储存此frequency的数据:{}".format(freq))
                 store.close()
-                return pd.DataFrame(columns=['time', 'open', 'close', 'high', 'low', 'volume', 'amount'])
+                return pd.DataFrame(columns=['time', 'open', 'close', 'high', 'low', 'volume'])
             else:
                 store.close()
                 return df
@@ -1035,6 +1080,7 @@ class DataSource(object):
 
     class Live:
         VQtdx = DataSourceTdxLive
+        VQtdx_Ext = DataSourceExtTdxLive
         VQapi = DataSourceVQAPI
 
 
@@ -1050,6 +1096,8 @@ elif ASHARE_LOCAL_DATASOURCE == 'VQtdx':
     DEFAULT_ASHARE_LOCAL_DATASOURCE = DataSource.Local.VQtdx
 else:
     DEFAULT_ASHARE_LOCAL_DATASOURCE = DataSource.Local.Default
+
+DEFAULT_FUTURE_LOCAL_DATASOURCE = DataSource.Local.Default
 #  默认实时A股K线数据获取方法
 if ASHARE_LIVE_DATASOURCE == 'VQtdx':
     DEFAULT_ASHARE_LIVE_DATASOURCE = DataSource.Live.VQtdx
@@ -1057,6 +1105,8 @@ elif ASHARE_LIVE_DATASOURCE == 'VQapi':
     DEFAULT_ASHARE_LIVE_DATASOURCE = DataSource.Live.VQapi
 else:
     DEFAULT_ASHARE_LIVE_DATASOURCE = DataSource.Live.VQtdx
+DEFAULT_FUTURE_LIVE_DATASOURCE = DataSource.Live.VQtdx_Ext
+
 DEFAULT_ASHARE_DATA_SOURCE = {'local': DEFAULT_ASHARE_LOCAL_DATASOURCE, 'live': DEFAULT_ASHARE_LIVE_DATASOURCE}
 
 #  默认代码列表数据获取方法

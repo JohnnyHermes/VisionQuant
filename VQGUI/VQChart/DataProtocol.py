@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from pyqtgraph import InfiniteLine
+from pyqtgraph import InfiniteLine, ScatterPlotItem, PlotDataItem
 
 from VQGUI.VQChart.ChartItem import LineItem, VPVRItem, PriceLabelItem
 from VQGUI.VQChart.Params import WHITE_COLOR
@@ -52,6 +52,23 @@ def indicator_protocol(ana_result, ind_name, **kwargs):
         return _ind_BSDP_protocol(data, **kwargs)
     if ind_name == 'DPMACD':
         return _ind_DPMACD_protocol(data, **kwargs)
+    if ind_name == 'UnitVol':
+        return _ind_unitvol_protocol(data, **kwargs)
+
+
+def _ind_unitvol_protocol(data, **kwargs):
+    itemtype = LineItem
+    item_name = 'indicator_unitvol'
+    res = []
+    params = dict()
+    penargs = {'color': '#66ccff', 'width': 1}
+    params['penargs'] = penargs
+    _data = {'x': data['x'], 'y': data['volume']}
+    res.append({'item_name': item_name,
+                'params': params,
+                'data': _data,
+                'itemtype': itemtype})
+    return res
 
 
 def _ind_BSDP_protocol(data: dict, **kwargs):

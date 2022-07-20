@@ -10,7 +10,7 @@ from VisionQuant.DataCenter.DataFetch import DataSource, FetchDataFailed, Ashare
 from VisionQuant.utils.Params import MarketType
 from VisionQuant.Analysis.Relativity.Relativity import Relativity, RELATIVITY_MAX_LEVEL
 from VisionQuant.DataCenter.CodePool import AshareCodePool
-from VisionQuant.DataCenter.DataStore import store_code_list_stock, store_blocks_data, \
+from VisionQuant.DataCenter.DataStore import store_code_list, store_blocks_data, \
     store_basic_finance_data, store_kdata_to_hdf5, store_update_failed_codelist, store_relativity_score_data_to_hdf5, \
     store_blocks_score_data_to_hdf5
 from VisionQuant.utils import TimeTool

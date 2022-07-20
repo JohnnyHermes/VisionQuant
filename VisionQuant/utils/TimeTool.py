@@ -135,7 +135,7 @@ def get_nearest_trade_date(t, market, flag='end'):
     """
 
     def _get_nearest_trade_date(_t, _trade_date_list, _flag='end'):
-        if flag == 'end':
+        if _flag == 'end':
             i = len(_trade_date_list) - 1
             while i >= 0:
                 if _t >= _trade_date_list[i]:
@@ -143,11 +143,12 @@ def get_nearest_trade_date(t, market, flag='end'):
                 else:
                     i -= 1
             return _trade_date_list[0]
-        elif flag == 'start':
+        elif _flag == 'start':
             i = 0
             len_list = len(_trade_date_list)
             while i <= len_list - 1:
-                if _t <= _trade_date_list[i]:
+                print(_trade_date_list[i])
+                if _t < _trade_date_list[i]:
                     return _trade_date_list[i]
                 else:
                     i += 1
@@ -156,8 +157,16 @@ def get_nearest_trade_date(t, market, flag='end'):
     if MarketType.is_ashare(market):
         if ASHARE_TRADE_DATE is None:
             return None
-        date_str = time_to_str(t)
+        date_str = time_to_str(t, fmt="%Y-%m-%d")
         return _get_nearest_trade_date(date_str, ASHARE_TRADE_DATE, flag)
+    elif MarketType.is_future(market):
+        if ASHARE_TRADE_DATE is None:
+            return None
+        date_str = time_to_str(t, fmt="%Y-%m-%d")
+        if 21 <= get_now_time(return_type='datetime').hour <= 23:
+            return _get_nearest_trade_date(date_str, ASHARE_TRADE_DATE, 'start')
+        else:
+            return _get_nearest_trade_date(date_str, ASHARE_TRADE_DATE, flag)
     else:
         raise ValueError  # todo: 不同市场类别
 
@@ -181,7 +190,34 @@ def is_trade_time(market):
             return 1
         else:
             return 0
+    elif MarketType.is_future(market):
+        if weekday > 5:
+            return 0
+        if ASHARE_TRADE_DATE is not None:
+            date_str = time_to_str(nowtime, '%Y-%m-%d')
+            if date_str not in ASHARE_TRADE_DATE:
+                return 0
+            h = nowtime.hour
+            if 0 <= h <= 3 or 9 <= h <= 16 or 21 <= h <= 23:
+                return 1
+            else:
+                return 0
     else:
+        return 0
+
+
+def is_trade_date(market):
+    nowtime = get_now_time(return_type='datetime')
+    weekday = nowtime.isoweekday()
+    if MarketType.is_ashare(market):
+        if weekday > 5:
+            return 0
+        if ASHARE_TRADE_DATE is not None:
+            date_str = time_to_str(nowtime, '%Y-%m-%d')
+            if date_str not in ASHARE_TRADE_DATE:
+                return 0
+        return 1
+    elif MarketType.is_future(market):
         return 0
 
 

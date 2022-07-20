@@ -4,7 +4,7 @@ import psutil
 import pandas as pd
 
 from VisionQuant.DataCenter import DataFetch
-from VisionQuant.DataStruct.AShare import AShare
+from VisionQuant.DataStruct.AShare import AShare, Future
 from VisionQuant.utils.Code import Code
 from VisionQuant.utils import TimeTool
 from VisionQuant.utils.Params import DATASERVER_MIN_FREE_MEM, MarketType
@@ -55,6 +55,9 @@ class KDataServer:
                 nearest_trade_date_start = TimeTool.get_nearest_trade_date(code.start_time, code.market, flag='start')
                 data_last_date = self.data_dict[code_key].get_last_time(code.frequency)
                 data_start_date = self.data_dict[code_key].get_start_time(code.frequency)
+                # print(end_date)
+                # print(nearest_trade_date_start,nearest_trade_date_end)
+                # print(data_start_date,data_last_date)
                 # print("本地数据范围：{} {}".format(data_start_date,data_last_date))
                 # print(data_start_date, data_last_date, nearest_trade_date_start, nearest_trade_date_end)
                 if isinstance(code.frequency, list):
@@ -133,7 +136,7 @@ class KDataServer:
             except Exception as e:
                 print(e)
                 data_dict[tmp_code.frequency] = pd.DataFrame(columns=['time', 'open', 'close',
-                                                                      'high', 'low', 'volume', 'amount'])
+                                                                      'high', 'low', 'volume'])
             else:
                 data_dict[tmp_code.frequency] = fetch_data
         self.data_dict[code_key].add_kdata(data_dict)
@@ -146,7 +149,7 @@ class KDataServer:
             except Exception as e:
                 print(e)
                 data_dict[_code.frequency] = pd.DataFrame(columns=['time', 'open', 'close',
-                                                                   'high', 'low', 'volume', 'amount'])
+                                                                   'high', 'low', 'volume'])
             else:
                 data_dict[_code.frequency] = fetch_data
 
@@ -163,6 +166,8 @@ class KDataServer:
         code_key = self.get_code_key(code)
         if MarketType.is_ashare(code.market):
             self.data_dict[code_key] = AShare(code, data_dict)
+        elif MarketType.is_future(code.market):
+            self.data_dict[code_key] = Future(code, data_dict)
         else:
             raise ValueError  # todo: 根据品种代码支持多品种
 
@@ -177,8 +182,13 @@ class KDataServer:
                 _fetch_data = data_source.fetch_kdata(socket_client, _code)
             except Exception as e:
                 print(e)
-                _fetch_data = pd.DataFrame(columns=['time', 'open', 'close',
-                                                    'high', 'low', 'volume', 'amount'])
+                if MarketType.is_ashare(_code.market):
+                    columns = ['time', 'open', 'close', 'high', 'low', 'volume']
+                elif MarketType.is_future(_code.market):
+                    columns = ['time', 'open', 'close', 'high', 'low', 'volume']
+                else:
+                    columns = ['time', 'open', 'close', 'high', 'low', 'volume']
+                _fetch_data = pd.DataFrame(columns=columns)
             return _fetch_data
 
         now_time = TimeTool.get_now_time(return_type='datetime')
@@ -187,7 +197,7 @@ class KDataServer:
 
         tmp_code = code.copy()
         tmp_code.start_time = TimeTool.get_start_time(tmp_code.end_time, days=7)
-        tmp_code.end_time = TimeTool.replace_time(tmp_code.end_time, hour=23, minute=59, second=59)
+        tmp_code.end_time = TimeTool.time_plus(tmp_code.end_time, days=7)
 
         if isinstance(code.frequency, list):
             for freq in code.frequency:
@@ -233,6 +243,8 @@ class KDataServer:
     def select_local_source(code: Code):
         if MarketType.is_ashare(code.market):
             return DataFetch.DEFAULT_ASHARE_LOCAL_DATASOURCE
+        elif MarketType.is_future(code.market):
+            return DataFetch.DEFAULT_FUTURE_LOCAL_DATASOURCE
         else:
             raise ValueError
 
@@ -240,6 +252,8 @@ class KDataServer:
     def select_live_source(code: Code):
         if MarketType.is_ashare(code.market):
             return DataFetch.DEFAULT_ASHARE_LIVE_DATASOURCE
+        elif MarketType.is_future(code.market):
+            return DataFetch.DEFAULT_FUTURE_LIVE_DATASOURCE
         else:
             raise ValueError
 

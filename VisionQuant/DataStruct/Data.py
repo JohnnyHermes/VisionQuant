@@ -9,9 +9,11 @@ from VisionQuant.utils.Params import Freq
 
 
 class KDataStruct:
-    def __init__(self, kdata_df):
+    def __init__(self, kdata_df, columns=None):
+        if columns is None:
+            columns = ['time', 'open', 'close', 'high', 'low', 'volume', 'amount']
         if len(kdata_df) == 0 or kdata_df is None:
-            self.data = pd.DataFrame(columns=['time', 'open', 'close', 'high', 'low', 'volume', 'amount'])
+            self.data = pd.DataFrame(columns=columns)
         else:
             self.data = kdata_df
 
@@ -150,11 +152,11 @@ class KDataStruct:
 
 
 class BaseDataStruct:
-    def __init__(self, code: object, kdata_dict):
+    def __init__(self, code: object, kdata_dict, columns=None):
         self.code = code
         self.kdata = dict()
         for frequency, kdata_df in kdata_dict.items():
-            self.kdata[frequency] = KDataStruct(kdata_df)
+            self.kdata[frequency] = KDataStruct(kdata_df, columns)
 
     def get_kdata(self, frequency):
         return self.kdata[frequency]

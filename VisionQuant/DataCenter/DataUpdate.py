@@ -10,7 +10,7 @@ from VisionQuant.DataCenter.DataStore import store_kdata_to_hdf5
 from VisionQuant.DataCenter.DataFetch import DataSource
 from VisionQuant.utils.Params import MarketType
 from VisionQuant.DataCenter.CodePool import AshareCodePool
-from VisionQuant.DataCenter.DataStore import store_code_list_stock, store_blocks_data, store_basic_finance_data
+from VisionQuant.DataCenter.DataStore import store_code_list, store_blocks_data, store_basic_finance_data
 
 data_server = DataServer()
 
