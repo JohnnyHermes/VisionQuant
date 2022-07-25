@@ -2,7 +2,7 @@ from VisionQuant.Market.HqClient import HqClient
 from VisionQuant.utils.Params import OrderLifeTime
 
 
-class StrategyBase:
+class StrategyBase(object):
     def __init__(self, code, local_data=None, local_basic_finance_data=None, show_result=False):
         self.code = code
         self.data_struct = None

@@ -90,6 +90,7 @@ class IndicatorChart(pg.PlotItem):
         item_name_list = list(self.items_dict.keys())
         for name in item_name_list:
             self.remove_item(name)
+        self.clear()
 
     def add_line(self, x, y, penargs, name, *args, **kwargs):
         line_item = LineItem(name, *args, **kwargs)

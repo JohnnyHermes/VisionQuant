@@ -147,7 +147,7 @@ def get_nearest_trade_date(t, market, flag='end'):
             i = 0
             len_list = len(_trade_date_list)
             while i <= len_list - 1:
-                print(_trade_date_list[i])
+                # print(_trade_date_list[i])
                 if _t < _trade_date_list[i]:
                     return _trade_date_list[i]
                 else:

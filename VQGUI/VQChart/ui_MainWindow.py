@@ -16,9 +16,8 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QApplication, QFormLayout, QMainWindow, QMenu,
-    QMenuBar, QSizePolicy, QStatusBar, QToolBar,
-    QWidget)
+from PySide6.QtWidgets import (QApplication, QFormLayout, QMainWindow, QSizePolicy,
+    QStatusBar, QToolBar, QWidget)
 
 from VQGUI.VQChart.ChartWidget import ChartWidget
 
@@ -74,24 +73,11 @@ class Ui_MainWindow(object):
         self.formLayout.setContentsMargins(0, 0, 0, 0)
         self.graphicsView = ChartWidget(self.centralwidget)
         self.graphicsView.setObjectName(u"graphicsView")
+        self.graphicsView.setEnabled(True)
 
         self.formLayout.setWidget(0, QFormLayout.SpanningRole, self.graphicsView)
 
         MainWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QMenuBar(MainWindow)
-        self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1440, 22))
-        self.menu = QMenu(self.menubar)
-        self.menu.setObjectName(u"menu")
-        self.menuVPVR = QMenu(self.menubar)
-        self.menuVPVR.setObjectName(u"menuVPVR")
-        self.menu_2 = QMenu(self.menuVPVR)
-        self.menu_2.setObjectName(u"menu_2")
-        self.menu_3 = QMenu(self.menuVPVR)
-        self.menu_3.setObjectName(u"menu_3")
-        self.menu_4 = QMenu(self.menuVPVR)
-        self.menu_4.setObjectName(u"menu_4")
-        MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         self.statusbar.setSizeGripEnabled(False)
@@ -101,25 +87,11 @@ class Ui_MainWindow(object):
         self.toolBar.setEnabled(True)
         MainWindow.addToolBar(Qt.TopToolBarArea, self.toolBar)
 
-        self.menubar.addAction(self.menu.menuAction())
-        self.menubar.addAction(self.menuVPVR.menuAction())
-        self.menu.addAction(self.action_OpenChart)
-        self.menu.addSeparator()
-        self.menuVPVR.addAction(self.menu_2.menuAction())
-        self.menuVPVR.addAction(self.menu_3.menuAction())
-        self.menuVPVR.addAction(self.menu_4.menuAction())
-        self.menu_2.addAction(self.action_VPVRshow)
-        self.menu_2.addSeparator()
-        self.menu_2.addAction(self.action_VPVRStatic)
-        self.menu_2.addAction(self.action_VPVRdynamic)
-        self.menu_3.addAction(self.action_UnitVPVRshow)
-        self.menu_3.addSeparator()
-        self.menu_3.addAction(self.action_UnitVPVRByTime)
-        self.menu_3.addAction(self.action_UnitVPVRByLevel)
         self.toolBar.addAction(self.action_OpenChart)
         self.toolBar.addAction(self.action_AutoUpdateChart)
         self.toolBar.addSeparator()
         self.toolBar.addAction(self.action_VPVRshow)
+        self.toolBar.addAction(self.action_VPVRStatic)
         self.toolBar.addAction(self.action_VPVRdynamic)
         self.toolBar.addSeparator()
         self.toolBar.addAction(self.action_UnitVPVRshow)
@@ -155,11 +127,6 @@ class Ui_MainWindow(object):
         self.action_ShowIndChart.setText(QCoreApplication.translate("MainWindow", u"\u663e\u793a\u6307\u6807\u56fe", None))
         self.action_HideIndChart.setText(QCoreApplication.translate("MainWindow", u"\u9690\u85cf\u6307\u6807\u56fe", None))
         self.action_SelectInd.setText(QCoreApplication.translate("MainWindow", u"\u9009\u62e9\u6307\u6807", None))
-        self.menu.setTitle(QCoreApplication.translate("MainWindow", u"\u83dc\u5355", None))
-        self.menuVPVR.setTitle(QCoreApplication.translate("MainWindow", u"VPVR", None))
-        self.menu_2.setTitle(QCoreApplication.translate("MainWindow", u"\u5168\u5c40\u663e\u793a", None))
-        self.menu_3.setTitle(QCoreApplication.translate("MainWindow", u"\u5355\u5143\u663e\u793a", None))
-        self.menu_4.setTitle(QCoreApplication.translate("MainWindow", u"\u5728\u8fd9\u91cc\u8f93\u5165", None))
         self.toolBar.setWindowTitle(QCoreApplication.translate("MainWindow", u"toolBar", None))
     # retranslateUi
 

@@ -8,7 +8,7 @@ from VisionQuant.DataCenter.DataServer import DataServer
 from VisionQuant.DataCenter.DataFetch import DataSource, FetchDataFailed, AshareBasicDataAPI
 from VisionQuant.utils.Params import MarketType, Freq
 from VisionQuant.Analysis.Relativity.Relativity import Relativity, RELATIVITY_MAX_LEVEL
-from VisionQuant.DataCenter.CodePool import AshareCodePool
+from VisionQuant.DataCenter.CodePool import AshareCodePool, FutureCodePool
 from VisionQuant.DataCenter.DataStore import store_code_list, store_blocks_data, \
     store_basic_finance_data, store_kdata_to_hdf5, store_update_failed_codelist, store_relativity_score_data_to_hdf5, \
     store_blocks_score_data_to_hdf5
@@ -275,6 +275,89 @@ class AshareDataUpdate(DataUpdateBase):
                 logger.success("更新A股basic_finance数据成功!")
 
 
+class FutureDataUpdate(DataUpdateBase):
+    def __init__(self):
+        super().__init__()
+        self.market_name = 'Future'
+        self.local_ds = DataSource.Local.Default
+        self.live_ds = DataSource.Live.VQtdx_Ext
+        self.code_pool = FutureCodePool(codelist_data_source=self.live_ds)
+
+    def update(self):
+        if 'all' in self.update_type:
+            self._update_basic_data()
+            self._update_kdata()
+            self._update_analyze_data()
+        else:
+            if 'basic' in self.update_type:
+                self._update_basic_data()
+            if 'kdata' in self.update_type:
+                self._update_kdata()
+            if 'analyze' in self.update_type:
+                self._update_analyze_data()
+            else:
+                if 'relativity' in self.update_type:
+                    self._update_relativity_analyze_data()
+                if 'blocks_score' in self.update_type:
+                    self._update_blocks_score_data()
+
+    def _update_basic_data(self):
+        self._update_codelist()
+        self._update_basic_finance_data()
+        self._update_blocks_data()
+
+    def _update_kdata(self):
+        def update_single_stock(_code):
+            try:
+                datastruct = data_server.get_kdata(_code)
+            except Exception as e:
+                raise e
+            else:
+                store_kdata_to_hdf5(datastruct)
+
+        logger.info("开始更新 {} 的A股k线数据...".format(today_date))
+        if self.update_codes is not None:
+            code_list = []
+            for code in self.update_codes:
+                code_list.append(self.code_pool.get_code(code, frequency=self.update_frequency))
+        else:
+            code_list = self.code_pool.get_all_code(frequency=self.update_frequency, return_type=list)
+        error_code_list = []
+        code_list = tqdm(code_list)
+        for code in code_list:
+            code_list.set_description("Updating {} {}".format(code.code, today_date))
+            try:
+                update_single_stock(code)
+            except Exception as e:
+                print(e)
+                error_code_list.append(code.code)
+        if len(error_code_list) > 0:
+            logger.warning("更新 {} 的期货k线数据部分成功，失败的代码列表见update_failed_codelist.txt".format(today_date))
+            store_update_failed_codelist(error_code_list, today_date)
+        else:
+            logger.success("更新 {} 的期货k线数据成功!".format(today_date))
+
+    def _update_analyze_data(self):
+        self._update_relativity_analyze_data()
+        self._update_blocks_score_data()
+
+    def _update_relativity_analyze_data(self):
+        pass
+
+    def _update_blocks_score_data(self):
+        pass
+
+    @staticmethod
+    def _update_blocks_data():
+        pass
+
+    def _update_codelist(self):
+        pass
+
+    @staticmethod
+    def _update_basic_finance_data():
+        pass
+
 def config_update_obj(_update_obj: DataUpdateBase, _update_type: list, codes, analyze_date, _update_frequency):
     _update_obj.config_update_type(_update_type)
     _update_obj.config_codes(codes)
@@ -307,6 +390,18 @@ if __name__ == '__main__':
             else:
                 logger.info("{} 是A股交易日，开始更新数据".format(today_date))
             tmp_obj = AshareDataUpdate()
+            config_update_obj(tmp_obj, update_type, update_code, update_dates, update_frequencys)
+            update_obj_list.append(tmp_obj)
+        elif m.lower() == 'future':
+            if not args.force_update and TimeTool.ASHARE_TRADE_DATE is not None:
+                if today_date not in TimeTool.ASHARE_TRADE_DATE:
+                    logger.info("{} 不是交易日，不更新数据".format(today_date))
+                    sys.exit()
+            if args.force_update:
+                logger.info("日期: {}, 对期货市场强制更新数据".format(today_date))
+            else:
+                logger.info("{} 是交易日，开始更新数据".format(today_date))
+            tmp_obj = FutureDataUpdate()
             config_update_obj(tmp_obj, update_type, update_code, update_dates, update_frequencys)
             update_obj_list.append(tmp_obj)
         else:

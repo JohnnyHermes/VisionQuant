@@ -21,14 +21,21 @@ from VQGUI.VQChart.DataProtocol import line_data_protocol, vpvr_data_protocol, n
 DEFAULT_DAYS = 30
 
 
-def get_analyze_data(_code):
-    strategy_obj = Relativity(code=_code, show_result=False)
-    strategy_obj.analyze()
-    if strategy_obj.analyze_flag:
-        ana_result = strategy_obj
-        return 1, ana_result
+def get_analyze_data(_code, _ana_result=None):
+    if _ana_result is not None:
+        _ana_result.analyze()
+        if _ana_result.analyze_flag:
+            return 1, _ana_result
+        else:
+            return 0, None
     else:
-        return 0, None
+        strategy_obj = Relativity(code=_code, show_result=False)
+        strategy_obj.analyze()
+        if strategy_obj.analyze_flag:
+            ana_result = strategy_obj
+            return 1, ana_result
+        else:
+            return 0, None
 
 
 class GetAnalyzeDataThread(QThread):
@@ -38,13 +45,15 @@ class GetAnalyzeDataThread(QThread):
         super().__init__()
         self.code = None
         self.callback = None
+        self.ana_result = None
 
-    def configure(self, code, callback):
+    def configure(self, code, callback, ana_result=None):
         self.code = code
         self.callback = callback
+        self.ana_result = ana_result
 
     def run(self):
-        ret, ana_result = get_analyze_data(self.code)
+        ret, ana_result = get_analyze_data(self.code, self.ana_result)
         self.result.emit({'ret': ret, 'ana_result': ana_result, 'callback': self.callback})
 
 
@@ -293,7 +302,7 @@ class MainWindow(QMainWindow):
     def update_widget(self):
         code = self.chart_widget.code
         code.end_time = TimeTool.get_now_time()
-        self.get_data_thread.configure(code, self._update_widget)
+        self.get_data_thread.configure(code, self._update_widget, self.chart_widget.analyze_result)
         self.chart_widget.code = code
         self.show_message("正在更新{}数据...更新时间{}".format(code.code, TimeTool.time_to_str(code.end_time)), 500)
         self.get_data_thread.start()
@@ -417,9 +426,9 @@ class MainWindow(QMainWindow):
             code = Code(text, end_time=TimeTool.get_now_time())
             if self.chart_widget.code is None or code.code != self.chart_widget.code.code:
                 self.chart_widget.clear_plots()
-                self.get_data_thread.configure(code, self.show_widget)
+                self.get_data_thread.configure(code, self.show_widget, None)
             else:
-                self.get_data_thread.configure(code, self._update_widget)
+                self.get_data_thread.configure(code, self._update_widget, self.chart_widget.analyze_result)
             self.show_message("正在更新{}数据...更新时间{}".format(code.code, TimeTool.time_to_str(code.end_time)), 500)
             self.get_data_thread.start()
 

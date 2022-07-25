@@ -89,6 +89,7 @@ class MainChart(pg.PlotItem):
         item_name_list = list(self.items_dict.keys())
         for name in item_name_list:
             self.remove_item(name)
+        self.clear()
 
     def add_line(self, x, y, penargs, name, *args, **kwargs):
         line_item = LineItem(name, *args, **kwargs)
@@ -140,7 +141,8 @@ class MainChart(pg.PlotItem):
             x_end = view_range[0][1]
         y_start, y_end = data.get_yrange(x_start, x_end)
         view.setXRange(x_start, x_end, padding=0)
-        view.setYRange(y_start, y_end, padding=0.05)
+        if y_start is not None and y_end is not None:
+            view.setYRange(y_start, y_end, padding=0.05)
 
     def configure_view_yrange(self):
         view = self.getViewBox()

@@ -25,7 +25,7 @@ save_dir = 'E:/Onedrive/策略log/Relativity/'
 # 引入pyc模块
 from VisionQuant.Analysis.Relativity import relativity_cy
 
-RELATIVITY_MAX_LEVEL = 7
+RELATIVITY_MAX_LEVEL = 8
 ANALYZE_FREQ = Freq.MIN1
 
 
@@ -84,21 +84,27 @@ class Relativity(StrategyBase):
         self.max_level = RELATIVITY_MAX_LEVEL
         self.min_step = 0.01
         self.analyze_flag = False
+        self.all_capital = None
 
     def analyze(self):
+        if self.analyze_flag:
+            self.update_analyze()
+            return None
         t = time.perf_counter()
-        self.analyze_flag = False
         data = self.get_data()
         self.kdata = data.get_kdata(ANALYZE_FREQ)
         # self.kdata.remove_zero_volume()  # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
         basic_finance_data = self.get_basic_finance_data()
         if basic_finance_data is None:
-            all_capital = self.kdata.data['volume'].sum() / 9
+            self.all_capital = self.kdata.data['volume'].sum() / 9
         else:
-            all_capital = basic_finance_data['流通股本']
+            self.all_capital = basic_finance_data['流通股本']
+
         if len(self.kdata) <= 7200:
             print("数据太短啦")
+            self.analyze_flag = False
             return None
+
         self.last_time = self.kdata.get_last_time()
         self.last_price = self.kdata.get_last_price()
         self.last_index = self.kdata.get_last_index()
@@ -106,29 +112,19 @@ class Relativity(StrategyBase):
         low = np.array(self.kdata.data['low'])
         volume = np.array(self.kdata.data['volume'])
         self.min_step = configure_step(self.code.market, self.last_price)
-        # print(self.min_step)
+        self.indicators = dict()
         t_read_data = time.perf_counter() - t
 
         t = time.perf_counter()
-        self.time_grav = relativity_cy.TimeGravitation(high, low,
-                                                       step=self.min_step,
-                                                       max_level=int(RELATIVITY_MAX_LEVEL))
-
+        # self.time_grav = relativity_cy.TimeGravitation(high, low,
+        #                                                step=self.min_step,
+        #                                                max_level=int(RELATIVITY_MAX_LEVEL))
+        self.time_grav = relativity_cy.TimeGravitation(step=self.min_step, max_level=int(RELATIVITY_MAX_LEVEL))
+        self.time_grav.init_data(high, low, volume)
         #
-        # t = time.perf_counter()
+        t1 = time.perf_counter()
+        print('分析TimeGrav: ', t1 - t)
 
-        time_grav_dict = self.time_grav.calc_time_grav_dict(volume)
-        # print('calc particle', time.perf_counter() - t)
-        # for key,data in time_grav_dict.items():
-        #     mean_val = data['dindex'].mean()
-        #     string = f'{key}:{mean_val}'
-        #     print(string)
-        # line_dist0 = time_grav_dict[0]
-
-        # plt.hist(line_dist1['dindex'], 50)
-        # plt.show()
-        # plt.hist(np.log(line_dist1['dindex']+1),50)
-        # plt.show()
         import scipy.stats as stats
         from copy import deepcopy
         # for line_dist in (line_dist1,line_dist2,line_dist3,line_dist4,line_dist5):
@@ -141,19 +137,18 @@ class Relativity(StrategyBase):
         #     print(x[idx])
         #     plt.plot(x, cdf)
         # plt.show()
-        # line_dist3 = relativity_cy.calc_line_list(self.time_grav.get_points(2), volume)
-        # line_dist2 = relativity_cy.calc_line_list(self.time_grav.get_points(1), volume)
-        # line_dist1 = relativity_cy.calc_line_list(self.time_grav.get_points(0), volume)
-        # print('calc line dist', time.perf_counter() - t)
-        t = time.perf_counter()
-        self.space_grav = relativity_cy.SpaceGravitation(high, low, volume, all_capital, step=self.min_step)
+        t2 = time.perf_counter()
+        self.space_grav = relativity_cy.SpaceGravitation(all_capital=self.all_capital, step=self.min_step)
+        self.space_grav.init_data(high, low, volume)
+        t3 = time.perf_counter()
+        print('分析SpaceGrav: ', t3 - t2)
         # qhs_index = relativity_cy.calc_qhs_index(volume, all_capital)
         # cm_dist0 = self.space_grav.get_grav_dist(self.last_index)
         # cm_dist1 = self.space_grav.get_grav_dist(self.last_index, start_index=qhs_index[0])
         # cm_dist0, cm_dist1 = relativity_cy.calc_CM_combine(high, low, volume, all_capital, min_price_step=min_step)
         # print('calc cm dist', time.perf_counter() - t)
         # print(time.perf_counter() - t)
-        self.indicators = dict()
+
         # mid_index = (-line_dist0['dindex'] + 2 * line_dist0['index']) / 2
         # mid_price = line_dist0['price'] * (1 + 1 / (line_dist0['dprice'] + 1)) * 0.5
         # ma_list = []
@@ -224,19 +219,12 @@ class Relativity(StrategyBase):
         # sell_index = np.where(time_grav_dict[0]['sellvol'] > 0)[0]
         # buy_volume_series = pd.Series(time_grav_dict[0]['buyvol'][buy_index])
         # sell_volume_series = pd.Series(time_grav_dict[0]['sellvol'][sell_index])
-        time_vol = np.zeros(len(volume))
-        time_dp = np.zeros(len(volume))
-        for line in time_grav_dict[0]:
-            index = line['index']
-            dindex = line['dindex']
-            dprice = line['dprice']
-            time_dp[index - dindex + 1: index + 1] = dprice / dindex
-            if line['buyvol'] > 0:
-                time_vol[index - dindex + 1: index + 1] = line['buyvol'] / dindex
-            else:
-                time_vol[index - dindex + 1: index + 1] = - line['sellvol'] / dindex
+        time_vol = self.time_grav.get_time_vol()
+        time_dp = self.time_grav.get_time_dprice()
         self.indicators['time_vol'] = time_vol
         self.indicators['time_dp'] = time_dp
+        t4 = time.perf_counter()
+        print('分析IndBase: ', t4 - t3)
         # if buy_index[0] == 0:
         #     flag = 1
         # else:
@@ -358,7 +346,7 @@ class Relativity(StrategyBase):
         # print('calc peak dist', time.perf_counter() - t)
         t_analyze = time.perf_counter() - t
         self.analyze_flag = True
-        print("分析{} {}完成, 读取数据用时:{:.4f}s 分析用时:{:.4f}s".format(self.code.code, self.last_time,
+        print("分析{} {}完成, 读取数据用时:{:.6f}s 分析用时:{:.6f}s".format(self.code.code, self.last_time,
                                                               t_read_data, t_analyze))
         # if self.show_result:
         #     obj = RelativityVisualize(figure_title=self.code.code + ' ' + TimeTool.time_to_str(self.last_time),
@@ -375,6 +363,46 @@ class Relativity(StrategyBase):
         #     # obj.draw_ori_zcyl(zcyl_list=tmp_p_set)
         #     obj.save(self.code.code + '_' + TimeTool.time_to_str(self.last_time, fmt='%Y%m%d%H%M%S'))
         # obj.show()
+
+    def update_analyze(self):
+        self.analyze_flag = False
+        t = time.perf_counter()
+        data = self.get_data()
+        self.kdata = data.get_kdata(ANALYZE_FREQ)
+        # self.kdata.remove_zero_volume()  # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交
+
+        if len(self.kdata) <= 7200:
+            print("数据太短啦")
+            return None
+
+        self.last_time = self.kdata.get_last_time()
+        self.last_price = self.kdata.get_last_price()
+        self.last_index = self.kdata.get_last_index()
+        high = np.array(self.kdata.data['high'])
+        low = np.array(self.kdata.data['low'])
+        volume = np.array(self.kdata.data['volume'])
+        t_read_data = time.perf_counter() - t
+
+        t = time.perf_counter()
+        self.time_grav.update_data(high, low, volume)
+        t1 = time.perf_counter()
+        print('分析TimeGrav: ', t1 - t)
+
+        t2 = time.perf_counter()
+        self.space_grav.update_data(high, low, volume)
+        t3 = time.perf_counter()
+        print('分析SpaceGrav: ', t3 - t2)
+
+        time_vol = self.time_grav.get_time_vol()
+        time_dp = self.time_grav.get_time_dprice()
+        self.indicators['time_vol'] = time_vol
+        self.indicators['time_dp'] = time_dp
+        t4 = time.perf_counter()
+        print('分析IndBase: ', t4 - t3)
+        t_analyze = time.perf_counter() - t
+        self.analyze_flag = True
+        print("更新分析{} {}完成, 读取数据用时:{:.6f}s 分析用时:{:.6f}s".format(self.code.code, self.last_time,
+                                                                t_read_data, t_analyze))
 
     def calc_indicator(self, indicator_name, **kwargs):
         if indicator_name == '累积成交量':

@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
@@ -7,7 +9,7 @@ from VQGUI.VQChart.ChartItem import LineItem, VPVRItem, PriceLabelItem
 from VQGUI.VQChart.Params import WHITE_COLOR
 from VisionQuant.Analysis.Relativity.Relativity import Relativity
 
-color_list = ['#b3b3b3', '#8da0cb', '#fc8d62', '#66c2a5', '#e78ac3', '#a6d854', '#ffd92f']
+color_list = ['#b3b3b3', '#8da0cb', '#fc8d62', '#66c2a5', '#e78ac3', '#a6d854', '#ffd92f', '6666cc']
 indi_color_list = ['#b3b3b3', '#8da0cb', '#fc8d62', '#66c2a5', '#e78ac3', '#a6d854', '#ffd92f']
 
 
@@ -22,6 +24,7 @@ def line_data_protocol(ana_result: Relativity):
         if level == 0:
             x, y = points['index'], points['price']
         else:
+            # x, y = points['index'], points['price']
             x, y = points['index'][:-1], points['price'][:-1]
         data['x'] = x
         data['y'] = y
