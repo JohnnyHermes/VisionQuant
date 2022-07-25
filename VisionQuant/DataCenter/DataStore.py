@@ -23,8 +23,10 @@ def kdata_store_market_transform(_market):
 def anadata_store_market_transform(_market):
     if _market is MarketType.Ashare:
         return 'Ashare'
-    else:  # todo:增加不同市场类型
+    elif _market is MarketType.Future:
         return 'Future'
+    else:  # todo:增加不同市场类型
+        raise ValueError("错误的市场类型")
 
 
 def store_kdata_to_hdf5(datastruct):
