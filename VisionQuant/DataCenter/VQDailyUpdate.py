@@ -281,7 +281,7 @@ class FutureDataUpdate(DataUpdateBase):
         self.market_name = 'Future'
         self.local_ds = DataSource.Local.Default
         self.live_ds = DataSource.Live.VQtdx_Ext
-        self.code_pool = FutureCodePool(codelist_data_source=self.live_ds)
+        self.code_pool = FutureCodePool(codelist_data_source=self.local_ds)
 
     def update(self):
         if 'all' in self.update_type:
