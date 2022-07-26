@@ -4,7 +4,7 @@ from VisionQuant.utils import TimeTool
 from copy import deepcopy
 from pandas import concat
 from functools import lru_cache
-
+from VisionQuant.utils.VQlog import logger
 from VisionQuant.utils.Params import Freq
 
 
@@ -12,7 +12,7 @@ class KDataStruct:
     def __init__(self, kdata_df, columns=None):
         if columns is None:
             columns = ['time', 'open', 'close', 'high', 'low', 'volume', 'amount']
-        if len(kdata_df) == 0 or kdata_df is None:
+        if kdata_df is None or len(kdata_df) == 0:
             self.data = pd.DataFrame(columns=columns)
         else:
             self.data = kdata_df
@@ -122,10 +122,16 @@ class KDataStruct:
             return self.data[self.data.time == TimeTool.time_standardization(time)].index.values[0]
 
     def update(self, new_kdata):
-        if len(new_kdata) == 0:
+        if new_kdata is None or len(new_kdata) == 0:
             return self
         if len(self) > 0:
-            tmp_ori_data = self.data[self.data['time'] < new_kdata['time'].values[0]]
+            concat_start_line = self.data[self.data['time'] == new_kdata['time'].values[0]]
+            if len(concat_start_line) == 0:
+                logger.warning("更新k线数据时数据不连续，可能出现数据错误，请及时更新本地数据！")
+                tmp_ori_data = self.data[self.data['time'] < new_kdata['time'].values[0]]
+            else:
+                concat_index = concat_start_line.index[0]
+                tmp_ori_data = self.data[self.data.index < concat_index]
             self.data = concat([tmp_ori_data, new_kdata])
             self.data = self.data.reset_index(drop=True)
         else:

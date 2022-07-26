@@ -124,7 +124,6 @@ class DataSourceExtTdxLive(DataSourceBase):
                                                         market=code.market.value,
                                                         freq=code.frequency,  # 这里不同访问freq的value属性，api自动转换
                                                         count=700)
-            print(1)
         except (ResponseRecvFailed, SendRequestPkgFailed, timeout, ResponseHeaderRecvFailed):
             logger.warning("连接至通达信服务器失败，重新尝试链接...")
             flg = socket_client.reconnect()
@@ -140,6 +139,8 @@ class DataSourceExtTdxLive(DataSourceBase):
             fix_columns = ['open', 'close', 'high', 'low']
             fetched_kdata[fix_columns] = fetched_kdata[fix_columns].apply(np.round, args=(fix,))
             fetched_kdata['volume'] = fetched_kdata['volume'].astype(np.float64)
+            if fetched_kdata['position'].dtype != np.int64:
+                fetched_kdata['position'] = fetched_kdata['position'].astype(np.int64)
             # for name in ('open','close','high','low')
             # fetched_kdata[]
             # 去除成交量为0的数据，包括停牌和因涨跌停造成无成交

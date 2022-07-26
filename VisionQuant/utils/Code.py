@@ -78,7 +78,7 @@ def determine_market(code: str, selected_market=None, return_type=MarketType):
                 res = MarketType.Future.DS
             elif ch[0] == 'T':
                 res = MarketType.Future.ZJ
-        elif ch in ('IC', 'IF', 'IH', 'TF', 'T', 'TS'):
+        elif ch in ('IC', 'IF', 'IH', 'TF', 'T', 'TS', 'IM'):
             res = MarketType.Future.ZJ
         elif ch in ('AP', 'CF', 'CJ', 'CY', 'FG', 'JR', 'LR', 'MA', 'OI', 'PF', 'PK', 'PM',
                     'RI', 'RM', 'RS', 'SA', 'SF', 'SM', 'SR', 'TA', 'UR', 'WH', 'ZC'):
@@ -181,7 +181,7 @@ def code_transform(code: str):
 
 class Code:
     def __init__(self, code: str, name: str = None, market: Union[MarketType, int] = None, frequency=None,
-                 start_time=None, end_time=None):
+                 start_time=None, end_time=None, is_update=True):
         self.code, _market = code_transform(code)
         if name is not None:
             self.name = name
@@ -222,6 +222,8 @@ class Code:
             self.end_time = TimeTool.time_standardization(end_time)
         else:
             self.end_time = TimeTool.get_now_time()
+
+        self.is_update = is_update
 
     def copy(self):
         return copy.deepcopy(self)
