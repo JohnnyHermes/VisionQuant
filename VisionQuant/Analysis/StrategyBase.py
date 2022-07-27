@@ -34,6 +34,12 @@ class StrategyBase(object):
         else:
             return None
 
+    def update_code(self, code):
+        if self.code.code != code.code:
+            print("品种代码不一致！")
+        else:
+            self.code = code
+
     def analyze(self):
         print(self.get_data().get_kdata('5').data_struct)
 

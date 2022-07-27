@@ -4,6 +4,8 @@ from VisionQuant.utils import TimeTool
 from copy import deepcopy
 from pandas import concat
 from functools import lru_cache
+
+from VisionQuant.utils.Code import Code
 from VisionQuant.utils.VQlog import logger
 from VisionQuant.utils.Params import Freq
 
@@ -158,11 +160,17 @@ class KDataStruct:
 
 
 class BaseDataStruct:
-    def __init__(self, code: object, kdata_dict, columns=None):
+    def __init__(self, code: Code, kdata_dict, columns=None):
         self.code = code
         self.kdata = dict()
         for frequency, kdata_df in kdata_dict.items():
             self.kdata[frequency] = KDataStruct(kdata_df, columns)
+
+    def update_code(self, new_code):
+        if self.code.code != new_code.code:
+            print("品种代码不一致！")
+        else:
+            self.code = new_code
 
     def get_kdata(self, frequency):
         return self.kdata[frequency]
@@ -207,7 +215,7 @@ class BaseDataStruct:
                 raise ValueError('DataStruct中不含该周期的数据')
 
     def filter(self, key='index', start=0, end=-1, is_reset_index=True, freqs=None):
-        if freqs is not None and not isinstance(freqs,list):
+        if freqs is not None and not isinstance(freqs, list):
             freqs = [freqs]
         tmp_data = self.copy()
 

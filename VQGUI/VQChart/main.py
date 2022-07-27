@@ -14,7 +14,8 @@ from VisionQuant.utils import TimeTool
 from VisionQuant.utils.Code import Code
 from VisionQuant.utils.Params import Freq
 from VQGUI.VQChart.ui_MainWindow import Ui_MainWindow
-from VQGUI.VQChart.ui_IndSelectDialog import Ui_IndSelectDialog
+from VQGUI.VQChart.IndSelectDialog import IndSelectDialog
+from VQGUI.VQChart.CodeInputDialog import CodeInputDialog
 from VQGUI.VQChart.DataProtocol import line_data_protocol, vpvr_data_protocol, now_price_protocol, \
     indicator_protocol
 
@@ -22,7 +23,8 @@ DEFAULT_DAYS = 30
 
 
 def get_analyze_data(_code, _ana_result=None):
-    if _ana_result is not None:
+    if _ana_result is not None and (_code.is_update or _code.end_time >= _ana_result.code.end_time):
+        _ana_result.update_code(_code)
         _ana_result.analyze()
         if _ana_result.analyze_flag:
             return 1, _ana_result
@@ -57,27 +59,6 @@ class GetAnalyzeDataThread(QThread):
         self.result.emit({'ret': ret, 'ana_result': ana_result, 'callback': self.callback})
 
 
-class IndSelectDialog(QDialog):
-    def __init__(self):
-        super(IndSelectDialog, self).__init__()
-        self.ui = Ui_IndSelectDialog()
-        self.ui.setupUi(self)
-        self.ind_dict = dict()
-
-    def init(self, ind_list):
-        for index, ind_name in enumerate(ind_list):
-            self.ind_dict[index] = ind_name
-        self.ui.comboBox.addItems(ind_list)
-
-    def get_value(self):
-        self.show()
-        if self.exec() == self.Accepted:
-            index = self.ui.comboBox.currentIndex()
-            return self.ind_dict[index], True
-        else:
-            return None, False
-
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -94,6 +75,7 @@ class MainWindow(QMainWindow):
         self._level = None
         self._interval = None
         self._current_ind_name = None
+        self._last_codeinput_data = {'code': None, 'is_update': True, 'start_time': None, 'end_time': None}
         self.init()
 
     def init(self):
@@ -314,7 +296,7 @@ class MainWindow(QMainWindow):
             index_list = points['index']
             length = len(index_list)
             x_range_list = []
-            for i in range(1, length-1):
+            for i in range(1, length - 1):
                 start_index = index_list[i - 1]
                 end_index = index_list[i]
                 x_range_list.append((start_index, end_index))
@@ -418,19 +400,39 @@ class MainWindow(QMainWindow):
             self.auto_update_flag = True
 
     def set_code(self):
-        dialogTitle = "输入对话框"
-        textLabel = "请输入代码"
-        echomode = QLineEdit.EchoMode.Normal
-        text, OK = QInputDialog.getText(self, dialogTitle, textLabel, echo=echomode)
+        dialog = CodeInputDialog()
+        dialog.init(**self._last_codeinput_data)
+        new_codeinput_data, OK = dialog.get_value()
         if OK:
-            code = Code(text, end_time=TimeTool.get_now_time())
-            if self.chart_widget.code is None or code.code != self.chart_widget.code.code:
-                self.chart_widget.clear_plots()
-                self.get_data_thread.configure(code, self.show_widget, None)
+            self._last_codeinput_data = new_codeinput_data
+            try:
+                code = Code(**self._last_codeinput_data)
+            except Exception as e:
+                print(e)
+                print("输入代码错误！")
             else:
-                self.get_data_thread.configure(code, self._update_widget, self.chart_widget.analyze_result)
-            self.show_message("正在更新{}数据...更新时间{}".format(code.code, TimeTool.time_to_str(code.end_time)), 500)
-            self.get_data_thread.start()
+                if self.chart_widget.code is None or code.code != self.chart_widget.code.code\
+                        or (not code.is_update and self.chart_widget.code.end_time >= code.end_time):
+                    self.chart_widget.clear_plots()
+                    self.get_data_thread.configure(code, self.show_widget, None)
+                else:
+                    self.get_data_thread.configure(code, self._update_widget, self.chart_widget.analyze_result)
+                self.show_message("正在更新{}数据...更新时间{}".format(code.code, TimeTool.time_to_str(code.end_time)), 500)
+                self.get_data_thread.start()
+
+        # dialogTitle = "输入对话框"
+        # textLabel = "请输入代码"
+        # echomode = QLineEdit.EchoMode.Normal
+        # text, OK = QInputDialog.getText(self, dialogTitle, textLabel, echo=echomode)
+        # if OK:
+        #     code = Code(text, end_time=TimeTool.get_now_time())
+        #     if self.chart_widget.code is None or code.code != self.chart_widget.code.code:
+        #         self.chart_widget.clear_plots()
+        #         self.get_data_thread.configure(code, self.show_widget, None)
+        #     else:
+        #         self.get_data_thread.configure(code, self._update_widget, self.chart_widget.analyze_result)
+        #     self.show_message("正在更新{}数据...更新时间{}".format(code.code, TimeTool.time_to_str(code.end_time)), 500)
+        #     self.get_data_thread.start()
 
     def _enable_buttons(self):
         self.ui.action_AutoUpdateChart.setEnabled(True)

@@ -32,7 +32,13 @@ class KDataServer:
             if self.force_live:
                 self._update_data(code)
                 data = self.data_dict[code_key].filter(key='time', start=code.start_time, freqs=code.frequency)
-                print("send kdata: {} start_time:{} end_time:{}".format(code.code, code.start_time, code.end_time))
+                data_start_time = data.get_start_time(code.frequency)
+                data_end_time = data.get_last_time(code.frequency)
+                if isinstance(data_start_time, dict):
+                    data_start_time = data_start_time[code.frequency[0]]
+                if isinstance(data_end_time, dict):
+                    data_end_time = data_end_time[code.frequency[0]]
+                print("send kdata: {} start_time:{} end_time:{}".format(code.code, data_start_time, data_end_time))
                 semaphore.release()
                 return data
             else:
@@ -57,7 +63,13 @@ class KDataServer:
                     data = self.data_dict[code_key].filter(key='time', start=code.start_time, end=code.end_time,
                                                            freqs=code.frequency)
 
-                print("send kdata: {} start_time:{} end_time:{}".format(code.code, code.start_time, code.end_time))
+                data_start_time = data.get_start_time(code.frequency)
+                data_end_time = data.get_last_time(code.frequency)
+                if isinstance(data_start_time, dict):
+                    data_start_time = data_start_time[code.frequency[0]]
+                if isinstance(data_end_time, dict):
+                    data_end_time = data_end_time[code.frequency[0]]
+                print("send kdata: {} start_time:{} end_time:{}".format(code.code, data_start_time, data_end_time))
                 semaphore.release()
                 return data
 
@@ -140,6 +152,7 @@ class KDataServer:
             fetch_data = update_single_freq_data(tmp_code)
             self.data_dict[code_key].get_kdata(code.frequency).update(fetch_data)
 
+        self.data_dict[code_key].update_code(code)
         self._last_update_time = now_time
 
     def _repair_data(self, code):
