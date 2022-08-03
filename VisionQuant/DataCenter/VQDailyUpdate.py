@@ -315,7 +315,7 @@ class FutureDataUpdate(DataUpdateBase):
             else:
                 store_kdata_to_hdf5(datastruct)
 
-        logger.info("开始更新 {} 的A股k线数据...".format(today_date))
+        logger.info("开始更新 {} 的期货k线数据...".format(today_date))
         if self.update_codes is not None:
             code_list = []
             for code in self.update_codes:
@@ -357,6 +357,7 @@ class FutureDataUpdate(DataUpdateBase):
     @staticmethod
     def _update_basic_finance_data():
         pass
+
 
 def config_update_obj(_update_obj: DataUpdateBase, _update_type: list, codes, analyze_date, _update_frequency):
     _update_obj.config_update_type(_update_type)
@@ -406,7 +407,7 @@ if __name__ == '__main__':
             update_obj_list.append(tmp_obj)
         else:
             logger.error("输入错误的参数-m {}".format(args.market))
-            raise ValueError("未知的市场参数！目前支持: Ashare")
+            raise ValueError("未知的市场参数！目前支持: Ashare Future")
             # todo: 多市场支持
 
     for update_obj in update_obj_list:

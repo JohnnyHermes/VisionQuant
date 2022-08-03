@@ -284,6 +284,7 @@ class MainWindow(QMainWindow):
     def update_widget(self):
         code = self.chart_widget.code
         code.end_time = TimeTool.get_now_time()
+        code.is_update = True
         self.get_data_thread.configure(code, self._update_widget, self.chart_widget.analyze_result)
         self.chart_widget.code = code
         self.show_message("正在更新{}数据...更新时间{}".format(code.code, TimeTool.time_to_str(code.end_time)), 500)

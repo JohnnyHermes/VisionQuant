@@ -59,10 +59,14 @@ class MainChart(pg.PlotItem):
         view_range = self.get_view_range()
         # [[12145.212864703284, 13592.760270060837], [2823.1710353818326, 3688.0489646181677]]
         x_start, x_end = math.floor(view_range[0][0]), math.ceil(view_range[0][1])
-        base_line_item = self.items_dict['level0']
-        y_start, y_end = base_line_item.get_yrange(x_start, x_end)
-        if y_start is not None:
-            view.setYRange(y_start, y_end, padding=0.05)
+        try:
+            base_line_item = self.items_dict['level0']  # todo: KeyError: 'level0'
+        except KeyError as e:
+            pass
+        else:
+            y_start, y_end = base_line_item.get_yrange(x_start, x_end)
+            if y_start is not None:
+                view.setYRange(y_start, y_end, padding=0.05)
 
     def _update_vpvr(self):
         vpvr_item_name_list = filter(lambda x: 'vpvr' in x, self.items_dict.keys())

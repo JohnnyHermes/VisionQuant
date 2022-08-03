@@ -1,5 +1,7 @@
 import math
 from copy import deepcopy
+from types import NoneType
+
 import numpy as np
 import pyqtgraph as pg
 from PySide6 import QtGui
@@ -47,6 +49,7 @@ class IndicatorChart(pg.PlotItem):
         # self.proxy = pg.SignalProxy(view.sigXRangeChanged, rateLimit=60, slot=self._update_vpvr)
 
     def _update_yrange(self):
+        "TypeError: '<' not supported between instances of 'NoneType' and 'NoneType'"
         view: pg.ViewBox = self.getViewBox()
         view_range = self.get_view_range()
         x_start, x_end = math.floor(view_range[0][0]), math.ceil(view_range[0][1])
@@ -60,8 +63,8 @@ class IndicatorChart(pg.PlotItem):
             else:
                 y_start.append(item_start)
                 y_end.append(item_end)
-        if y_start is not None and y_start:
-            y_start = min(y_start)
+        if y_start is not None and y_start and not isinstance(y_start[0], NoneType):
+            y_start = min(y_start)  # todo: typeerror
             y_end = max(y_end)
             view.setYRange(y_start, y_end, padding=0.05)
 
