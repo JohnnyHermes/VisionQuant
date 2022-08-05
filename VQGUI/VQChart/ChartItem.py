@@ -281,6 +281,23 @@ class PriceLabelItem(pg.InfiniteLine):
         self.setValue(price)
 
 
+class TrendLineItem(pg.InfiniteLine):
+    def __init__(self):
+        super().__init__(pos=0, angle=0, movable=True)
+        self.start_pos = None
+        self.end_pos = None
+        self.sigClicked.connect(self.selected)
+
+    def set_start_pos(self, pos):
+        self.start_pos = pos
+
+    def set_end_pos(self, pos):
+        self.end_pos = pos
+
+    def selected(self):
+        pass
+
+
 class Cursor(QtCore.QObject):
     """"""
     x_pos: Signal = Signal(int)

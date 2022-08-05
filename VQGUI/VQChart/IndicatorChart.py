@@ -1,6 +1,5 @@
 import math
 from copy import deepcopy
-from types import NoneType
 
 import numpy as np
 import pyqtgraph as pg
@@ -61,9 +60,10 @@ class IndicatorChart(pg.PlotItem):
             except Exception as e:
                 pass
             else:
-                y_start.append(item_start)
-                y_end.append(item_end)
-        if y_start is not None and y_start and not isinstance(y_start[0], NoneType):
+                if item_start is not None:
+                    y_start.append(item_start)
+                    y_end.append(item_end)
+        if y_start is not None and y_start:
             y_start = min(y_start)  # todo: typeerror
             y_end = max(y_end)
             view.setYRange(y_start, y_end, padding=0.05)
