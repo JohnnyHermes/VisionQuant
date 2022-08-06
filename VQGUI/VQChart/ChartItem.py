@@ -1,3 +1,5 @@
+import math
+import uuid
 from abc import abstractmethod
 from typing import Tuple, Dict
 
@@ -7,7 +9,7 @@ from PySide6 import QtCore, QtGui
 from PySide6.QtCore import QRectF, Signal, QPointF
 from PySide6.QtGui import QPen, QBrush, QFont, QColor
 from PySide6.QtWidgets import QGraphicsTextItem
-from pyqtgraph import InfiniteLine
+from pyqtgraph import InfiniteLine, Point
 
 from VQGUI.VQChart.Params import WHITE_COLOR, CURSOR_COLOR, BLACK_COLOR, NORMAL_FONT, BOTTOM_AXIS_FONT, RIGHT_AXIS_FONT, \
     GREY_COLOR, VPVR_COLOR, UnitVPVR_COLOR, POC_COLOR, VPVR_FONT, PRICE_LABEL_FONT, PRICE_LABEL_COLOR
@@ -282,20 +284,77 @@ class PriceLabelItem(pg.InfiniteLine):
 
 
 class TrendLineItem(pg.InfiniteLine):
+    sigRightButtonClicked: Signal = Signal(str)
+
     def __init__(self):
         super().__init__(pos=0, angle=0, movable=True)
         self.start_pos = None
         self.end_pos = None
-        self.sigClicked.connect(self.selected)
+        name = '_'.join(['draw', str(uuid.uuid4())])
+        self.setName(name)
 
     def set_start_pos(self, pos):
         self.start_pos = pos
+        self.setPos(self.start_pos)
 
     def set_end_pos(self, pos):
-        self.end_pos = pos
+        if self.start_pos is not None:
+            self.end_pos = pos
+            dx = self.end_pos.x() - self.start_pos.x()
+            dy = self.end_pos.y() - self.start_pos.y()
+            if dx == 0:
+                angle = 90
+            elif dy == 0:
+                angle = 0
+            else:
+                angle = math.atan(dy / dx) * 180 / math.pi
+            self.setAngle(angle)
 
-    def selected(self):
-        pass
+    def mouseClickEvent(self, ev):
+        self.sigClicked.emit(self, ev)
+        if ev.button() == QtCore.Qt.MouseButton.RightButton:
+            ev.accept()
+            self.moving = False
+            self.sigDragged.emit(self)
+            self.sigPositionChangeFinished.emit(self)
+            self.sigRightButtonClicked.emit(self.name())
+
+    def _computeBoundingRect(self):
+        # br = UIGraphicsItem.boundingRect(self)
+        vr = self.viewRect()  # bounds of containing ViewBox mapped to local coords.
+        if vr is None:
+            return QtCore.QRectF()
+
+        ## add a 4-pixel radius around the line for mouse interaction.
+
+        px = self.pixelLength(direction=Point(1, 0), ortho=True)  ## get pixel length orthogonal to the line
+        if px is None:
+            px = 0
+        pw = max(self.pen.width() / 2, self.hoverPen.width() / 2)
+        w = max(2, self._maxMarkerSize + pw) + 1
+        w = w * px
+        br = QtCore.QRectF(vr)
+        br.setBottom(-w)
+        br.setTop(w)
+
+        length = br.width()
+        left = br.left() + length * self.span[0]
+        right = br.left() + length * self.span[1]
+        br.setLeft(left)
+        br.setRight(right)
+        br = br.normalized()
+
+        vs = self.getViewBox().size()
+
+        if self._bounds != br or self._lastViewSize != vs:
+            self._bounds = br
+            self._lastViewSize = vs
+            self.prepareGeometryChange()
+
+        self._endPoints = (left, right)
+        self._lastViewRect = vr
+
+        return self._bounds
 
 
 class Cursor(QtCore.QObject):

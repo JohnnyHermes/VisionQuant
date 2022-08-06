@@ -112,7 +112,7 @@ class DataSourceTdxLive(DataSourceBase):
 
 
 class DataSourceExtTdxLive(DataSourceBase):
-    name = 'tdx_live'
+    name = 'ext_tdx_live'
     sk_client = TdxExtHqSocketClient
 
     @staticmethod

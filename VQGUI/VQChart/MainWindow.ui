@@ -70,6 +70,8 @@
    <addaction name="action_ShowIndChart"/>
    <addaction name="action_HideIndChart"/>
    <addaction name="action_SelectInd"/>
+   <addaction name="separator"/>
+   <addaction name="action_OpenDrawTool"/>
   </widget>
   <action name="action_AutoUpdateChart">
    <property name="enabled">
@@ -179,6 +181,14 @@
    </property>
    <property name="text">
     <string>选择指标</string>
+   </property>
+  </action>
+  <action name="action_OpenDrawTool">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>画图工具</string>
    </property>
   </action>
  </widget>

@@ -58,7 +58,10 @@ class DataUpdateBase:
         self.analyze_date = dates
 
     def config_update_frequency(self, _update_frequency):
-        self.update_frequency = _update_frequency
+        if len(_update_frequency) == 1:
+            self.update_frequency = _update_frequency[0]
+        else:
+            self.update_frequency = _update_frequency
 
     def update(self):
         pass
@@ -120,7 +123,7 @@ class AshareDataUpdate(DataUpdateBase):
                 code_list.append(self.code_pool.get_code(code, frequency=self.update_frequency))
         else:
             code_list = self.code_pool.get_all_code(frequency=self.update_frequency, return_type=list,
-                                                    selected_market=UPDATE_MATKETTYPE)
+                                                    selected_market=UPDATE_MATKETTYPE, is_update=True)
         error_code_list = []
         code_list = tqdm(code_list)
         for code in code_list:
@@ -321,7 +324,7 @@ class FutureDataUpdate(DataUpdateBase):
             for code in self.update_codes:
                 code_list.append(self.code_pool.get_code(code, frequency=self.update_frequency))
         else:
-            code_list = self.code_pool.get_all_code(frequency=self.update_frequency, return_type=list)
+            code_list = self.code_pool.get_all_code(frequency=self.update_frequency, return_type=list, is_update=True)
         error_code_list = []
         code_list = tqdm(code_list)
         for code in code_list:

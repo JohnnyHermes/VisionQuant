@@ -18,6 +18,7 @@ from VQGUI.VQChart.IndSelectDialog import IndSelectDialog
 from VQGUI.VQChart.CodeInputDialog import CodeInputDialog
 from VQGUI.VQChart.DataProtocol import line_data_protocol, vpvr_data_protocol, now_price_protocol, \
     indicator_protocol
+from VQGUI.VQChart.DrawToolWidget import DrawToolWidget
 
 DEFAULT_DAYS = 30
 
@@ -76,6 +77,7 @@ class MainWindow(QMainWindow):
         self._interval = None
         self._current_ind_name = None
         self._last_codeinput_data = {'code': None, 'is_update': True, 'start_time': None, 'end_time': None}
+        self.draw_tool_widget = DrawToolWidget()
         self.init()
 
     def init(self):
@@ -92,10 +94,16 @@ class MainWindow(QMainWindow):
         self.ui.action_ShowIndChart.triggered.connect(self.on_action_ShowIndChart_triggered)
         self.ui.action_HideIndChart.triggered.connect(self.on_action_HideIndChart_triggered)
         self.ui.action_SelectInd.triggered.connect(self.on_action_SelectInd_triggered)
+        self.ui.action_OpenDrawTool.triggered.connect(self.on_action_OpenDrawTool_triggered)
         self.timer.timeout.connect(self.update_widget)
         self.tick_timer.timeout.connect(self.now_time_update)
         self.get_data_thread.result.connect(self._on_analyze_finished)
         self.tick_timer.start(1000)
+
+    def on_action_OpenDrawTool_triggered(self):
+        self.draw_tool_widget.init(self.chart_widget.main_chart.draw_tool)
+        self.draw_tool_widget.show()
+        print('open_draw_tool')
 
     def on_action_ShowIndChart_triggered(self):
         if self.chart_widget.get_plot('indicator'):
@@ -441,6 +449,7 @@ class MainWindow(QMainWindow):
         self.ui.action_UnitVPVRshow.setEnabled(True)
         self.ui.action_ShowIndChart.setEnabled(True)
         self.ui.action_HideIndChart.setEnabled(True)
+        self.ui.action_OpenDrawTool.setEnabled(True)
         # self.ui.action_VPVRStatic.setEnabled(True)
         # self.ui.action_VPVRdynamic.setEnabled(True)
         # self.ui.action_UnitVPVRByTime.setEnabled(True)

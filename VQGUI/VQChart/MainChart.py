@@ -11,6 +11,7 @@ from VQGUI.VQChart.TimeAxis import TimeAxis
 from VQGUI.VQChart.ChartItem import LineItem, VPVRItem, PriceLabelItem
 from VisionQuant.utils.Code import Code
 from VisionQuant.utils.Params import Freq
+from VQGUI.VQChart.DrawTool import DrawTool
 
 
 class MainChart(pg.PlotItem):
@@ -25,6 +26,7 @@ class MainChart(pg.PlotItem):
         self.hideButtons()
         self.items_dict = dict()
         self.proxy = None
+        self.draw_tool = DrawTool(self)
 
         # Connect view change signal to update y range function
         view: pg.ViewBox = self.getViewBox()
@@ -94,6 +96,11 @@ class MainChart(pg.PlotItem):
         for name in item_name_list:
             self.remove_item(name)
         self.clear()
+
+    def add_draw_item(self, draw_item, name):
+        draw_item.setZValue(11)
+        self.addItem(draw_item)
+        self.items_dict[name] = draw_item
 
     def add_line(self, x, y, penargs, name, *args, **kwargs):
         line_item = LineItem(name, *args, **kwargs)

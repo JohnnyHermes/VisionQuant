@@ -11,13 +11,14 @@ from VisionQuant.utils.Params import Freq
 
 
 class KDataStruct:
-    def __init__(self, kdata_df, columns=None):
+    def __init__(self, kdata_df, columns=None, code=''):
         if columns is None:
             columns = ['time', 'open', 'close', 'high', 'low', 'volume', 'amount']
         if kdata_df is None or len(kdata_df) == 0:
             self.data = pd.DataFrame(columns=columns)
         else:
             self.data = kdata_df
+        self.code = code
 
     @lru_cache()
     def __len__(self):
@@ -129,8 +130,8 @@ class KDataStruct:
         if len(self) > 0:
             concat_start_line = self.data[self.data['time'] == new_kdata['time'].values[0]]
             if len(concat_start_line) == 0:
-                logger.warning("更新k线数据时数据不连续，可能出现数据错误，请及时更新本地数据！")
-                tmp_ori_data = self.data[self.data['time'] < new_kdata['time'].values[0]]
+                logger.warning("{} 更新k线数据时数据不连续，可能出现数据错误，请及时更新本地数据！".format(self.code))
+                return self
             else:
                 concat_index = concat_start_line.index[0]
                 tmp_ori_data = self.data[self.data.index < concat_index]
@@ -164,7 +165,7 @@ class BaseDataStruct:
         self.code = code
         self.kdata = dict()
         for frequency, kdata_df in kdata_dict.items():
-            self.kdata[frequency] = KDataStruct(kdata_df, columns)
+            self.kdata[frequency] = KDataStruct(kdata_df, columns, code=code.code)
 
     def update_code(self, new_code):
         if self.code.code != new_code.code:

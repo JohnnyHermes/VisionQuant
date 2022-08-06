@@ -133,6 +133,7 @@ class KDataServer:
                 print(e)
                 return None
             else:
+                self._last_update_time = TimeTool.get_now_time(return_type='datetime')
                 return _fetch_data
 
         now_time = TimeTool.get_now_time(return_type='datetime')
@@ -142,7 +143,6 @@ class KDataServer:
         tmp_code = code.copy()
         tmp_code.start_time = TimeTool.get_start_time(tmp_code.end_time, days=7)
         tmp_code.end_time = TimeTool.time_plus(tmp_code.end_time, days=7)
-
         if isinstance(code.frequency, list):
             for freq in code.frequency:
                 tmp_code.frequency = freq
@@ -153,7 +153,6 @@ class KDataServer:
             self.data_dict[code_key].get_kdata(code.frequency).update(fetch_data)
 
         self.data_dict[code_key].update_code(code)
-        self._last_update_time = now_time
 
     def _repair_data(self, code):
         data_source = self.select_local_source(code)

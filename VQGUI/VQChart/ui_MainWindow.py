@@ -66,6 +66,9 @@ class Ui_MainWindow(object):
         self.action_SelectInd = QAction(MainWindow)
         self.action_SelectInd.setObjectName(u"action_SelectInd")
         self.action_SelectInd.setEnabled(False)
+        self.action_OpenDrawTool = QAction(MainWindow)
+        self.action_OpenDrawTool.setObjectName(u"action_OpenDrawTool")
+        self.action_OpenDrawTool.setEnabled(False)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.formLayout = QFormLayout(self.centralwidget)
@@ -103,6 +106,8 @@ class Ui_MainWindow(object):
         self.toolBar.addAction(self.action_ShowIndChart)
         self.toolBar.addAction(self.action_HideIndChart)
         self.toolBar.addAction(self.action_SelectInd)
+        self.toolBar.addSeparator()
+        self.toolBar.addAction(self.action_OpenDrawTool)
 
         self.retranslateUi(MainWindow)
 
@@ -127,6 +132,7 @@ class Ui_MainWindow(object):
         self.action_ShowIndChart.setText(QCoreApplication.translate("MainWindow", u"\u663e\u793a\u6307\u6807\u56fe", None))
         self.action_HideIndChart.setText(QCoreApplication.translate("MainWindow", u"\u9690\u85cf\u6307\u6807\u56fe", None))
         self.action_SelectInd.setText(QCoreApplication.translate("MainWindow", u"\u9009\u62e9\u6307\u6807", None))
+        self.action_OpenDrawTool.setText(QCoreApplication.translate("MainWindow", u"\u753b\u56fe\u5de5\u5177", None))
         self.toolBar.setWindowTitle(QCoreApplication.translate("MainWindow", u"toolBar", None))
     # retranslateUi
 
